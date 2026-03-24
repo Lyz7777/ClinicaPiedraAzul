@@ -1,15 +1,29 @@
 import { useState } from "react";
-import { HeartPulse, ShieldUser, ClipboardList, UserRound } from "lucide-react";
+import { Eye, EyeOff, HeartPulse, ShieldUser, ClipboardList, UserRound } from "lucide-react";
 
 function Login({ onLogin }: any) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [rol, setRol] = useState<"admin" | "agendador" | "paciente">("admin");
   const [cargando, setCargando] = useState(false);
 
   const login = async () => {
     if (!username || !password) {
       alert("Por favor ingrese usuario y contraseña");
+      return;
+    }
+
+    if (rol === "paciente") {
+      if (username.toLowerCase().trim() !== "paciente" || password !== "1234") {
+        alert("Credenciales inválidas para paciente. Use paciente / 1234");
+        return;
+      }
+
+      localStorage.setItem("token", "paciente-demo");
+      localStorage.setItem("rol", "paciente");
+      localStorage.setItem("username", "paciente");
+      onLogin("paciente");
       return;
     }
 
@@ -28,7 +42,9 @@ function Login({ onLogin }: any) {
 
       const data = await res.json();
       localStorage.setItem("token", data.access_token);
-      onLogin();
+      localStorage.setItem("rol", rol);
+      localStorage.setItem("username", username);
+      onLogin(rol);
     } catch (error) {
       console.error("Error en login:", error);
       alert(" Error al conectar con el servidor");
@@ -82,20 +98,36 @@ function Login({ onLogin }: any) {
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && login()}
             />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && login()}
-            />
-            <button onClick={login} disabled={cargando}>
+            <div className="login-password-wrap">
+              <input
+                type={mostrarPassword ? "text" : "password"}
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && login()}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setMostrarPassword((prev) => !prev)}
+                aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {mostrarPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <button className="login-submit-btn" onClick={login} disabled={cargando}>
               {cargando ? "Ingresando..." : "Entrar al sistema"}
             </button>
           </div>
 
           <div className="login-footer">
-            <small>Credenciales de prueba: admin / admin</small>
+            <small>
+              {rol === "paciente"
+                ? "Credenciales paciente: paciente / 1234"
+                : rol === "admin"
+                ? "Credenciales administrador: administrador / 1234"
+                : "Credenciales de prueba agendador: admin / admin"}
+            </small>
           </div>
         </div>
       </section>

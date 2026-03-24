@@ -27,7 +27,14 @@ const ESPECIALIDADES = [
   "Nutrición"
 ];
 
-function Medicos() {
+interface MedicosProps {
+  rol?: "admin" | "agendador" | "paciente";
+  modo?: "gestion" | "configuracion";
+}
+
+function Medicos({ rol = "agendador", modo = "gestion" }: MedicosProps) {
+  const esAdmin = rol === "admin";
+  const soloConfiguracion = modo === "configuracion";
   const [medicos, setMedicos] = useState<any[]>([]);
   const [nombre, setNombre] = useState("");
   const [especialidad, setEspecialidad] = useState("");
@@ -167,11 +174,16 @@ function Medicos() {
   return (
     <div>
       <div className="page-header">
-        <h2>Especialistas</h2>
-        <p>Gestión de médicos y horarios de atención</p>
+        <h2>{soloConfiguracion ? "Configuración de Horarios" : "Especialistas"}</h2>
+        <p>
+          {soloConfiguracion
+            ? "Ajuste administrativo de disponibilidad médica"
+            : "Gestión de médicos y horarios de atención"}
+        </p>
       </div>
 
       {/* Configuración Global */}
+      {esAdmin && (
       <div className="card-custom">
         <h4>Configuración Global</h4>
         <div className="form-group">
@@ -194,8 +206,10 @@ function Medicos() {
           {cargandoGlobal ? "Guardando..." : "Guardar Configuración Global"}
         </button>
       </div>
+      )}
 
       {/* Formulario para crear/editar médico */}
+      {!soloConfiguracion && (
       <div className="card-custom">
         <h4>{editandoId ? "Editar especialista" : "Nuevo especialista"}</h4>
 
@@ -226,9 +240,12 @@ function Medicos() {
           {editandoId ? "Actualizar" : "Guardar Especialista"}
         </button>
       </div>
+      )}
 
       {/* Lista de médicos */}
-      <h4 style={{ marginBottom: 16, marginTop: 8 }}>Lista de Especialistas</h4>
+      <h4 style={{ marginBottom: 16, marginTop: 8 }}>
+        {soloConfiguracion ? "Médicos para Configurar" : "Lista de Especialistas"}
+      </h4>
       
       {medicos.length === 0 ? (
         <div className="empty-state">
@@ -261,22 +278,28 @@ function Medicos() {
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn btn-secondary" onClick={() => editarMedico(m)}>
-                  Editar
-                </button>
-                <button 
-                  className="btn btn-primary"
-                  style={{ background: "var(--warning)" }}
-                  onClick={() => abrirConfiguracion(m)}
-                >
-                  Configurar Horario
-                </button>
-                <button 
-                  className="btn btn-danger"
-                  onClick={() => eliminarMedicoHandler(m.id)}
-                >
-                  Eliminar
-                </button>
+                {!soloConfiguracion && (
+                  <button className="btn btn-secondary" onClick={() => editarMedico(m)}>
+                    Editar
+                  </button>
+                )}
+                {esAdmin && (
+                  <button 
+                    className="btn btn-primary"
+                    style={{ background: "var(--warning)" }}
+                    onClick={() => abrirConfiguracion(m)}
+                  >
+                    Configurar Horario
+                  </button>
+                )}
+                {!soloConfiguracion && (
+                  <button 
+                    className="btn btn-danger"
+                    onClick={() => eliminarMedicoHandler(m.id)}
+                  >
+                    Eliminar
+                  </button>
+                )}
               </div>
             </div>
           </div>

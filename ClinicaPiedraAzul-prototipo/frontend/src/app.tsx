@@ -15,6 +15,7 @@ import {
   Settings,
   SlidersHorizontal,
   CheckCircle2,
+  UserCog,
 } from "lucide-react";
 import Login from "./app/components/Login";
 import Sidebar from "./app/components/Sidebar";
@@ -28,6 +29,7 @@ import "./style.css";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [rolActivo, setRolActivo] = useState<"admin" | "agendador" | "paciente">("admin");
   const [vista, setVista] = useState("citas");
 
   const metricasVista: Record<string, { titulo: string; valor: string; nota: string; icono: any }[]> = {
@@ -60,13 +62,30 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
+    const rol = localStorage.getItem("rol") as "admin" | "agendador" | "paciente" | null;
+    if (token || rol === "paciente") {
+      if (rol) {
+        setRolActivo(rol);
+      }
+      if (rol === "paciente") setVista("agendar-web");
+      if (rol === "admin") setVista("configuracion");
+      if (rol === "agendador") setVista("citas");
       setIsLoggedIn(true);
     }
   }, []);
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    return (
+      <Login
+        onLogin={(rol) => {
+          setRolActivo(rol);
+          if (rol === "paciente") setVista("agendar-web");
+          if (rol === "admin") setVista("configuracion");
+          if (rol === "agendador") setVista("citas");
+          setIsLoggedIn(true);
+        }}
+      />
+    );
   }
 
   const renderVista = () => {
@@ -74,37 +93,13 @@ function App() {
       case "citas":
         return <Citas />;
       case "medicos":
-        return <Medicos />;
+        return <Medicos rol={rolActivo} />;
       case "pacientes":
         return <Pacientes />;
       case "agendar-web":
         return <AgendarWeb />;
       case "configuracion":
-        return (
-          <div>
-            <div className="page-header">
-              <h2>Configuración del Sistema</h2>
-              <p>Parámetros generales de agendamiento</p>
-            </div>
-            <div className="card-custom">
-              <h4>Configuración Global</h4>
-              <div className="form-group">
-                <label>Ventana de tiempo para agendar citas (semanas)</label>
-                <input type="number" min="1" max="12" defaultValue="4" />
-                <small>Las citas se pueden agendar con esta cantidad de semanas de anticipación</small>
-              </div>
-            </div>
-            <div className="card-custom">
-              <h4>Configuración por Especialista</h4>
-              <p>Seleccione un especialista para configurar su horario de atención</p>
-              <select className="mt-select">
-                <option>Dra. Ana García - Medicina General</option>
-                <option>Dr. Carlos Pérez - Cardiología</option>
-                <option>Dra. María López - Pediatría</option>
-              </select>
-            </div>
-          </div>
-        );
+        return <Medicos rol={rolActivo} modo="configuracion" />;
       default:
         return <Citas />;
     }
@@ -114,8 +109,29 @@ function App() {
     <div className="app-container">
       <Header />
       <div className="main-layout">
-        <Sidebar setVista={setVista} activeVista={vista} />
+        <Sidebar setVista={setVista} activeVista={vista} rol={rolActivo} />
         <main className="main-content">
+          <section className="role-banner">
+            <div className="role-banner-icon">
+              <UserCog size={18} />
+            </div>
+            <div>
+              <p className="role-banner-title">
+                {rolActivo === "admin"
+                  ? "Dashboard Administrador"
+                  : rolActivo === "agendador"
+                  ? "Dashboard Agendador"
+                  : "Dashboard Paciente"}
+              </p>
+              <span className="role-banner-subtitle">
+                {rolActivo === "admin"
+                  ? "Gestiona la configuración de horarios y parámetros de agenda"
+                  : rolActivo === "agendador"
+                  ? "Administra citas y operaciones del día"
+                  : "Agenda tu cita de forma rápida y segura"}
+              </span>
+            </div>
+          </section>
           <section className="metrics-grid">
             {(metricasVista[vista] ?? metricasVista.citas).map((m) => (
               <article className="metric-card" key={`${vista}-${m.titulo}`}>

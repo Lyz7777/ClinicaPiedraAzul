@@ -625,25 +625,63 @@ small {
 /* ========== ESTADOS ========== */
 .badge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: 40px;
-  font-size: 0.68rem;
-  font-weight: 500;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  letter-spacing: 0.01em;
 }
 
 .badge-success {
-  background: #d1fae5;
-  color: var(--success);
+  background: #22c55e;
+  color: #111111;
+  border-color: #16a34a;
 }
 
 .badge-warning {
-  background: #fffbeb;
-  color: var(--warning);
+  background: #facc15;
+  color: #111111;
+  border-color: #eab308;
 }
 
 .badge-danger {
-  background: #fee2e2;
-  color: var(--danger);
+  background: #ef4444;
+  color: #111111;
+  border-color: #dc2626;
+}
+
+.role-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(120deg, rgba(0, 182, 220, 0.12) 0%, rgba(171, 72, 255, 0.12) 100%);
+  border: 1px solid rgba(0, 182, 220, 0.25);
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.role-banner-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(120deg, var(--brand-start) 0%, var(--brand-end) 100%);
+  color: #ffffff;
+}
+
+.role-banner-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--violet-dark);
+}
+
+.role-banner-subtitle {
+  font-size: 0.75rem;
+  color: var(--gray-700);
 }
 
 /* ========== FOOTER ========== */
@@ -1062,7 +1100,36 @@ small {
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
 }
 
-.login-form button {
+.login-password-wrap {
+  position: relative;
+}
+
+.login-password-wrap input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #64829a;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.password-toggle:hover {
+  background: #f0f7ff;
+  color: #365267;
+}
+
+.login-submit-btn {
   margin-top: 4px;
   border: none;
   padding: 13px 14px;
@@ -1075,12 +1142,12 @@ small {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-form button:hover:not(:disabled) {
+.login-submit-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(37, 99, 235, 0.32);
 }
 
-.login-form button:disabled {
+.login-submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }

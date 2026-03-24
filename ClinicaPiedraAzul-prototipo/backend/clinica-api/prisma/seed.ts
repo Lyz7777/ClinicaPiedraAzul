@@ -9,20 +9,52 @@ const adapter = new PrismaBetterSqlite3({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // Crear usuario admin
-  const hashedPassword = await bcrypt.hash('admin', 10);
+  // Usuario legado para compatibilidad
+  const hashedAdminPassword = await bcrypt.hash('admin', 10);
   
   await prisma.usuario.upsert({
     where: { username: 'admin' },
     update: {},
     create: {
       username: 'admin',
-      password: hashedPassword,
+      password: hashedAdminPassword,
       role: 'admin',
     },
   });
+
+  // Usuario alineado con el frontend
+  const hashedAdministradorPassword = await bcrypt.hash('1234', 10);
+
+  await prisma.usuario.upsert({
+    where: { username: 'administrador' },
+    update: {
+      password: hashedAdministradorPassword,
+      role: 'admin',
+    },
+    create: {
+      username: 'administrador',
+      password: hashedAdministradorPassword,
+      role: 'admin',
+    },
+  });
+
+  // Usuario paciente para pruebas integrales frontend/backend
+  const hashedPacientePassword = await bcrypt.hash('1234', 10);
+
+  await prisma.usuario.upsert({
+    where: { username: 'paciente' },
+    update: {
+      password: hashedPacientePassword,
+      role: 'patient',
+    },
+    create: {
+      username: 'paciente',
+      password: hashedPacientePassword,
+      role: 'patient',
+    },
+  });
   
-  console.log('Usuario admin creado');
+  console.log('Usuarios admin, administrador y paciente sincronizados');
 }
 
 main()

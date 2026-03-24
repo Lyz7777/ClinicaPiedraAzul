@@ -3,6 +3,7 @@ import { Cross, LogOut, UserRound } from "lucide-react";
 
 function Header() {
   const [usuario, setUsuario] = useState("");
+  const [rol, setRol] = useState("");
   const fechaHoy = new Date().toLocaleDateString("es-CO", {
     weekday: "long",
     day: "2-digit",
@@ -11,18 +12,25 @@ function Header() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const savedRole = localStorage.getItem("rol") || "admin";
+    const savedUsername = localStorage.getItem("username") || "Admin";
+    setRol(savedRole);
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUsuario(payload.username || payload.sub || "Admin");
       } catch {
-        setUsuario("Admin");
+        setUsuario(savedUsername);
       }
+    } else {
+      setUsuario(savedUsername);
     }
   }, []);
 
   const cerrarSesion = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("rol");
+    localStorage.removeItem("username");
     window.location.reload();
   };
 
@@ -51,6 +59,9 @@ function Header() {
         <div className="user-info">
           <span className="user-greeting">Bienvenido</span>
           <span className="user-name">{usuario}</span>
+          <span className="user-greeting" style={{ textTransform: "capitalize" }}>
+            {rol}
+          </span>
         </div>
         <button className="logout-btn" onClick={cerrarSesion}>
           <LogOut size={14} />
