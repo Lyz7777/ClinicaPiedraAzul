@@ -789,6 +789,54 @@ small {
   border-top: 1px solid var(--violet-border);
 }
 
+.horario-info-banner {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 182, 220, 0.24);
+  background: linear-gradient(120deg, rgba(0, 182, 220, 0.1) 0%, rgba(171, 72, 255, 0.09) 100%);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  box-shadow: 0 6px 14px rgba(0, 182, 220, 0.08);
+}
+
+.horario-info-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  border: 1px solid rgba(0, 182, 220, 0.2);
+  flex-shrink: 0;
+}
+
+.horario-info-content {
+  flex: 1;
+}
+
+.horario-info-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--violet-dark);
+}
+
+.horario-info-text {
+  margin: 3px 0 0;
+  font-size: 0.74rem;
+  color: #2f4559;
+}
+
+.horario-info-note {
+  margin: 4px 0 0;
+  font-size: 0.7rem;
+  color: #3b5c73;
+}
+
 /* ========== RESERVA EN LÍNEA ========== */
 .stepper {
   display: flex;

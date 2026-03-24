@@ -26,6 +26,22 @@ export const crearCita = async (data: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
   });
+
+  if (!res.ok) {
+    let mensaje = "No fue posible agendar la cita";
+    try {
+      const error = await res.json();
+      if (typeof error?.message === "string") {
+        mensaje = error.message;
+      } else if (Array.isArray(error?.message)) {
+        mensaje = error.message.join(". ");
+      }
+    } catch {
+      // Sin cuerpo JSON de error, se conserva mensaje genérico.
+    }
+    throw new Error(mensaje);
+  }
+
   return res.json();
 };
 

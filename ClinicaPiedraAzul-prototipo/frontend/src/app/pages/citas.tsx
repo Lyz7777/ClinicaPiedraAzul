@@ -18,6 +18,7 @@ function Citas() {
   const [medicoId, setMedicoId] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
+  const [horasDelTurno, setHorasDelTurno] = useState<string[]>([]);
   
   const [nuevoPaciente, setNuevoPaciente] = useState<{
     documento: string;
@@ -74,12 +75,69 @@ function Citas() {
       const cargarHoras = async () => {
         const horas = await getHorasDisponibles(Number(medicoId), fecha);
         setHorasDisponibles(horas);
+
+        const medicoSeleccionado = medicos.find((m: any) => m.id === Number(medicoId));
+        const config = medicoSeleccionado?.configuracion;
+
+        if (!config) {
+          setHorasDelTurno([]);
+          return;
+        }
+
+        const diasAtencion: string[] = Array.isArray(config.diasAtencion)
+          ? config.diasAtencion
+          : [];
+
+        const normalizar = (valor: string) =>
+          valor
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase();
+
+        const [anio, mes, dia] = fecha.split('-').map(Number);
+        const fechaLocal = new Date(anio, mes - 1, dia);
+        const diasSemana = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+        const diaSeleccionado = diasSemana[fechaLocal.getDay()];
+
+        const atiendeEseDia = diasAtencion
+          .map((d) => normalizar(d))
+          .includes(normalizar(diaSeleccionado));
+
+        if (!atiendeEseDia) {
+          setHorasDelTurno([]);
+          return;
+        }
+
+        const [inicioH, inicioM] = (config.horaInicio || '08:00').split(':').map(Number);
+        const [finH, finM] = (config.horaFin || '17:00').split(':').map(Number);
+        const intervalo = Number(config.intervaloMinutos) || 30;
+
+        let horaActual = inicioH * 60 + inicioM;
+        const horaFinTotal = finH * 60 + finM;
+        const todas: string[] = [];
+
+        while (horaActual < horaFinTotal) {
+          const h = Math.floor(horaActual / 60);
+          const m = horaActual % 60;
+          todas.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+          horaActual += intervalo;
+        }
+
+        setHorasDelTurno(todas);
       };
       cargarHoras();
     } else {
       setHorasDisponibles([]);
+      setHorasDelTurno([]);
     }
-  }, [medicoId, fecha]);
+  }, [medicoId, fecha, medicos]);
+
+  useEffect(() => {
+    if (hora && !horasDisponibles.includes(hora)) {
+      setHora("");
+    }
+  }, [hora, horasDisponibles]);
 
   const buscarPaciente = async (documento: string) => {
     if (!documento || documento.length < 5) return;
@@ -117,14 +175,19 @@ function Citas() {
       return;
     }
 
-    await crearCita({
-      fecha,
-      hora,
-      pacienteId: Number(pacienteId),
-      medicoId: Number(medicoId),
-      descripcion,
-      estado: "AGENDADA"
-    });
+    try {
+      await crearCita({
+        fecha,
+        hora,
+        pacienteId: Number(pacienteId),
+        medicoId: Number(medicoId),
+        descripcion,
+        estado: "AGENDADA"
+      });
+    } catch (error: any) {
+      alert(error?.message || "No fue posible agendar la cita");
+      return;
+    }
 
     setFecha("");
     setHora("");
@@ -152,6 +215,11 @@ function Citas() {
       alert("Por favor seleccione un especialista");
     }
   };
+
+  const horasOcupadas = horasDelTurno.filter((h) => !horasDisponibles.includes(h));
+  const totalHoras = horasDelTurno.length;
+  const totalDisponibles = horasDisponibles.length;
+  const totalOcupadas = horasOcupadas.length;
 
   return (
     <div>
@@ -273,13 +341,34 @@ function Citas() {
               <select
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
-                disabled={horasDisponibles.length === 0}
+                disabled={horasDelTurno.length === 0}
               >
                 <option value="">Seleccionar hora</option>
-                {horasDisponibles.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {horasDelTurno.map((h) => {
+                  const ocupada = !horasDisponibles.includes(h);
+                  return (
+                    <option key={h} value={h} disabled={ocupada}>
+                      {ocupada ? `${h} (ocupada)` : h}
+                    </option>
+                  );
+                })}
               </select>
+              {medicoId && fecha && totalHoras > 0 && (
+                <div className="horario-info-banner" role="status" aria-live="polite">
+                  <div className="horario-info-icon" aria-hidden="true">🕒</div>
+                  <div className="horario-info-content">
+                    <p className="horario-info-title">Horarios del día</p>
+                    <p className="horario-info-text">
+                      Disponibles: <strong>{totalDisponibles}</strong> · Ocupadas: <strong>{totalOcupadas}</strong>
+                    </p>
+                    {totalOcupadas > 0 && (
+                      <p className="horario-info-note">
+                        Las horas ocupadas aparecen en gris y no se pueden seleccionar.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-group">
