@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Usuario {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String
+  role     String @default("admin")
+}
+
+model Medico {
+  id            Int                  @id @default(autoincrement())
+  nombre        String
+  especialidad  String
+  citas         Cita[]
+  configuracion ConfiguracionMedico?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+}
+
+model Paciente {
+  id              Int      @id @default(autoincrement())
+  documento       String   @unique
+  nombres         String
+  apellidos       String
+  celular         String
+  genero          String   @default("Otro")
+  fechaNacimiento String?
+  email           String?
+  citas           Cita[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Cita {
+  id          Int      @id @default(autoincrement())
+  fecha       String
+  hora        String
+  pacienteId  Int
+  medicoId    Int
+  descripcion String?
+  estado      String   @default("AGENDADA")
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+  medico      Medico   @relation(fields: [medicoId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ConfiguracionGlobal {
+  id             Int      @id @default(autoincrement())
+  ventanaSemanas Int      @default(4)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ConfiguracionMedico {
+  id               Int      @id @default(autoincrement())
+  medicoId         Int      @unique
+  medico           Medico   @relation(fields: [medicoId], references: [id], onDelete: Cascade)
+  diasAtencion     String   @default("LUNES,MIERCOLES,VIERNES")  // Cambiado a String
+  horaInicio       String   @default("08:00")
+  horaFin          String   @default("17:00")
+  intervaloMinutos Int      @default(30)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
