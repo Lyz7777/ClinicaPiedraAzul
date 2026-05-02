@@ -1,7 +1,9 @@
-import { Controller, Get, Put, Body } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ConfiguracionService } from './configuracion.service';
 
 @Controller('configuracion')
+@UseGuards(AuthGuard('jwt'))
 export class ConfiguracionController {
   constructor(private readonly configuracionService: ConfiguracionService) {}
 

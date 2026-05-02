@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  engineType = "library"
 }
 
 datasource db {
@@ -48,8 +47,20 @@ model Cita {
   estado      String   @default("AGENDADA")
   paciente    Paciente @relation(fields: [pacienteId], references: [id])
   medico      Medico   @relation(fields: [medicoId], references: [id])
+  historial   HistorialCita[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model HistorialCita {
+  id            Int      @id @default(autoincrement())
+  citaId        Int
+  campo         String
+  valorAnterior String
+  valorNuevo    String
+  modificadoPor String
+  createdAt     DateTime @default(now())
+  cita          Cita     @relation(fields: [citaId], references: [id], onDelete: Cascade)
 }
 
 model ConfiguracionGlobal {
@@ -63,7 +74,7 @@ model ConfiguracionMedico {
   id               Int      @id @default(autoincrement())
   medicoId         Int      @unique
   medico           Medico   @relation(fields: [medicoId], references: [id], onDelete: Cascade)
-  diasAtencion     String   @default("LUNES,MIERCOLES,VIERNES")  // Cambiado a String
+  diasAtencion     String   @default("LUNES,MIERCOLES,VIERNES")
   horaInicio       String   @default("08:00")
   horaFin          String   @default("17:00")
   intervaloMinutos Int      @default(30)

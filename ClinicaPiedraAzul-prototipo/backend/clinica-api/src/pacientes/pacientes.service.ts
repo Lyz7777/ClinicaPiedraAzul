@@ -4,24 +4,26 @@ import { CreatePacienteDto } from './dto/create-paciente.dto';
 
 @Injectable()
 export class PacientesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prismaService: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.paciente.findMany();
+  private get prisma() {
+    return this.prismaService.prisma;
+  }
+
+  async findAll(order: 'asc' | 'desc' = 'asc') {
+    return this.prisma.paciente.findMany({
+      orderBy: { apellidos: order },
+    });
   }
 
   async findOne(id: number) {
-    const paciente = await this.prisma.paciente.findUnique({
-      where: { id },
-    });
+    const paciente = await this.prisma.paciente.findUnique({ where: { id } });
     if (!paciente) throw new NotFoundException('Paciente no encontrado');
     return paciente;
   }
 
   async findByDocumento(documento: string) {
-    return this.prisma.paciente.findUnique({
-      where: { documento },
-    });
+    return this.prisma.paciente.findUnique({ where: { documento } });
   }
 
   async create(data: CreatePacienteDto) {
@@ -30,10 +32,7 @@ export class PacientesService {
 
   async update(id: number, data: Partial<CreatePacienteDto>) {
     await this.findOne(id);
-    return this.prisma.paciente.update({
-      where: { id },
-      data,
-    });
+    return this.prisma.paciente.update({ where: { id }, data });
   }
 
   async remove(id: number) {

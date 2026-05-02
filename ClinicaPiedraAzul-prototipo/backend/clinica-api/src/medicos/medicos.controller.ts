@@ -1,13 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { MedicosService } from './medicos.service';
 
 @Controller('medicos')
+@UseGuards(AuthGuard('jwt'))
 export class MedicosController {
   constructor(private readonly medicosService: MedicosService) {}
 
   @Get()
-  findAll() {
-    return this.medicosService.findAll();
+  findAll(@Query('order') order?: 'asc' | 'desc') {
+    return this.medicosService.findAll(order);
   }
 
   @Get(':id')
@@ -21,10 +23,7 @@ export class MedicosController {
   }
 
   @Put(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: { nombre?: string; especialidad?: string }
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() body: { nombre?: string; especialidad?: string }) {
     return this.medicosService.update(id, body);
   }
 
@@ -33,22 +32,13 @@ export class MedicosController {
     return this.medicosService.remove(id);
   }
 
-  // Endpoints de configuración
   @Get(':id/configuracion')
   getConfiguracion(@Param('id', ParseIntPipe) id: number) {
     return this.medicosService.getConfiguracion(id);
   }
 
   @Put(':id/configuracion')
-  saveConfiguracion(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: {
-      diasAtencion: string[];
-      horaInicio: string;
-      horaFin: string;
-      intervaloMinutos: number;
-    }
-  ) {
+  saveConfiguracion(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
     return this.medicosService.saveConfiguracion(id, body);
   }
 }

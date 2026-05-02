@@ -1,14 +1,16 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { PacientesService } from './pacientes.service';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 
 @Controller('pacientes')
+@UseGuards(AuthGuard('jwt'))
 export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 
   @Get()
-  getPacientes() {
-    return this.pacientesService.findAll();
+  getPacientes(@Query('order') order?: 'asc' | 'desc') {
+    return this.pacientesService.findAll(order);
   }
 
   @Get('documento/:documento')
@@ -28,7 +30,7 @@ export class PacientesController {
 
   @Put(':id')
   updatePaciente(@Param('id') id: string, @Body() body: CreatePacienteDto) {
-    return this.pacientesService.update(Number(id), body);
+    return this.pacientesService.create(body);
   }
 
   @Delete(':id')

@@ -3,15 +3,22 @@ import { getCitas, crearCita, getHorasDisponibles } from "../services/citas.serv
 import { getPacientes, buscarPacientePorDocumento, crearPaciente } from "../services/pacientes.service";
 import { getMedicos } from "../services/medicos.service";
 
+type Genero = "Hombre" | "Mujer" | "Otro";
+
 function Citas() {
+  // ========== ESTADOS GENERALES ==========
   const [citas, setCitas] = useState<any[]>([]);
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [medicos, setMedicos] = useState<any[]>([]);
-  const [filtroMedicoId, setFiltroMedicoId] = useState("");
-  const [filtroFecha, setFiltroFecha] = useState(new Date().toISOString().split('T')[0]);
-  const [citasFiltradas, setCitasFiltradas] = useState<any[]>([]);
   const [mostrandoListado, setMostrandoListado] = useState(true);
+  
+  // Paginación local
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [orden, setOrden] = useState<"asc" | "desc">("asc");
+  const limit = 10;
 
+  // ========== ESTADOS PARA CREAR CITA ==========
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
   const [pacienteId, setPacienteId] = useState("");
@@ -19,36 +26,40 @@ function Citas() {
   const [descripcion, setDescripcion] = useState("");
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
   const [horasDelTurno, setHorasDelTurno] = useState<string[]>([]);
-  
-  const [nuevoPaciente, setNuevoPaciente] = useState<{
-    documento: string;
-    nombres: string;
-    apellidos: string;
-    celular: string;
-    genero: "Hombre" | "Mujer" | "Otro";
-    fechaNacimiento: string;
-    email: string;
-  }>({
+  const [nuevoPaciente, setNuevoPaciente] = useState({
     documento: "",
     nombres: "",
     apellidos: "",
     celular: "",
-    genero: "Otro",
+    genero: "Otro" as Genero,
     fechaNacimiento: "",
-    email: ""
+    email: "",
   });
-  
   const [mostrarFormPaciente, setMostrarFormPaciente] = useState(false);
   const [pacienteExistente, setPacienteExistente] = useState<any>(null);
   const [buscandoPaciente, setBuscandoPaciente] = useState(false);
 
+  // ========== ESTADOS PARA REAGENDAR ==========
+  const [citaSeleccionada, setCitaSeleccionada] = useState<any>(null);
+  const [mostrarModalReagendar, setMostrarModalReagendar] = useState(false);
+  const [nuevaFechaReag, setNuevaFechaReag] = useState("");
+  const [nuevaHoraReag, setNuevaHoraReag] = useState("");
+  const [cargandoReagendar, setCargandoReagendar] = useState(false);
+  const [horasDisponiblesReag, setHorasDisponiblesReag] = useState<string[]>([]);
+  const [cargandoHorasReag, setCargandoHorasReag] = useState(false);
+
+  // ========== ESTADOS PARA HISTORIAL ==========
+  const [mostrarModalHistorial, setMostrarModalHistorial] = useState(false);
+  const [historial, setHistorial] = useState<any[]>([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+  // ========== CARGAR DATOS INICIALES ==========
   const cargarTodo = async () => {
     const [citasData, pacientesData, medicosData] = await Promise.all([
       getCitas(),
       getPacientes(),
-      getMedicos()
+      getMedicos(),
     ]);
-    
     setCitas(citasData);
     setPacientes(pacientesData);
     setMedicos(medicosData);
@@ -58,93 +69,40 @@ function Citas() {
     cargarTodo();
   }, []);
 
-  useEffect(() => {
-    if (filtroMedicoId && filtroFecha) {
-      const filtradas = citas.filter(cita => 
-        cita.medicoId === Number(filtroMedicoId) && 
-        cita.fecha === filtroFecha
-      );
-      setCitasFiltradas(filtradas);
-    } else {
-      setCitasFiltradas([]);
-    }
-  }, [citas, filtroMedicoId, filtroFecha]);
+  // ========== PAGINACIÓN Y ORDEN LOCAL ==========
+  const getCitasPaginadas = () => {
+    let citasOrdenadas = [...citas];
+    citasOrdenadas.sort((a, b) => {
+      const compareFecha = orden === "asc"
+        ? a.fecha.localeCompare(b.fecha)
+        : b.fecha.localeCompare(a.fecha);
+      if (compareFecha !== 0) return compareFecha;
+      return orden === "asc"
+        ? a.hora.localeCompare(b.hora)
+        : b.hora.localeCompare(a.hora);
+    });
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginadas = citasOrdenadas.slice(start, end);
+    const total = citasOrdenadas.length;
+    const totalPag = Math.ceil(total / limit);
+    if (totalPages !== totalPag) setTotalPages(totalPag);
+    return paginadas;
+  };
 
-  useEffect(() => {
-    if (medicoId && fecha) {
-      const cargarHoras = async () => {
-        const horas = await getHorasDisponibles(Number(medicoId), fecha);
-        setHorasDisponibles(horas);
+  const cambiarPagina = (nueva: number) => setPage(nueva);
+  const cambiarOrden = () => {
+    setOrden(orden === "asc" ? "desc" : "asc");
+    setPage(1);
+  };
 
-        const medicoSeleccionado = medicos.find((m: any) => m.id === Number(medicoId));
-        const config = medicoSeleccionado?.configuracion;
+  const citasMostrar = getCitasPaginadas();
 
-        if (!config) {
-          setHorasDelTurno([]);
-          return;
-        }
-
-        const diasAtencion: string[] = Array.isArray(config.diasAtencion)
-          ? config.diasAtencion
-          : [];
-
-        const normalizar = (valor: string) =>
-          valor
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .trim()
-            .toUpperCase();
-
-        const [anio, mes, dia] = fecha.split('-').map(Number);
-        const fechaLocal = new Date(anio, mes - 1, dia);
-        const diasSemana = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
-        const diaSeleccionado = diasSemana[fechaLocal.getDay()];
-
-        const atiendeEseDia = diasAtencion
-          .map((d) => normalizar(d))
-          .includes(normalizar(diaSeleccionado));
-
-        if (!atiendeEseDia) {
-          setHorasDelTurno([]);
-          return;
-        }
-
-        const [inicioH, inicioM] = (config.horaInicio || '08:00').split(':').map(Number);
-        const [finH, finM] = (config.horaFin || '17:00').split(':').map(Number);
-        const intervalo = Number(config.intervaloMinutos) || 30;
-
-        let horaActual = inicioH * 60 + inicioM;
-        const horaFinTotal = finH * 60 + finM;
-        const todas: string[] = [];
-
-        while (horaActual < horaFinTotal) {
-          const h = Math.floor(horaActual / 60);
-          const m = horaActual % 60;
-          todas.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-          horaActual += intervalo;
-        }
-
-        setHorasDelTurno(todas);
-      };
-      cargarHoras();
-    } else {
-      setHorasDisponibles([]);
-      setHorasDelTurno([]);
-    }
-  }, [medicoId, fecha, medicos]);
-
-  useEffect(() => {
-    if (hora && !horasDisponibles.includes(hora)) {
-      setHora("");
-    }
-  }, [hora, horasDisponibles]);
-
+  // ========== FUNCIONES PARA CREAR CITA ==========
   const buscarPaciente = async (documento: string) => {
     if (!documento || documento.length < 5) return;
-    
     setBuscandoPaciente(true);
     const paciente = await buscarPacientePorDocumento(documento);
-    
     if (paciente) {
       setPacienteExistente(paciente);
       setPacienteId(paciente.id.toString());
@@ -158,10 +116,9 @@ function Citas() {
 
   const registrarNuevoPaciente = async () => {
     if (!nuevoPaciente.documento || !nuevoPaciente.nombres || !nuevoPaciente.apellidos || !nuevoPaciente.celular) {
-      alert("Por favor complete los campos obligatorios del paciente");
+      alert("Complete los campos obligatorios del paciente");
       return;
     }
-
     const nuevo = await crearPaciente(nuevoPaciente);
     setPacienteId(nuevo.id.toString());
     setMostrarFormPaciente(false);
@@ -171,10 +128,9 @@ function Citas() {
 
   const crear = async () => {
     if (!fecha || !hora || !pacienteId || !medicoId) {
-      alert("Por favor complete todos los campos obligatorios");
+      alert("Complete todos los campos");
       return;
     }
-
     try {
       await crearCita({
         fecha,
@@ -182,13 +138,12 @@ function Citas() {
         pacienteId: Number(pacienteId),
         medicoId: Number(medicoId),
         descripcion,
-        estado: "AGENDADA"
+        estado: "AGENDADA",
       });
     } catch (error: any) {
-      alert(error?.message || "No fue posible agendar la cita");
+      alert(error?.message || "No se pudo agendar");
       return;
     }
-
     setFecha("");
     setHora("");
     setPacienteId("");
@@ -201,26 +156,148 @@ function Citas() {
       celular: "",
       genero: "Otro",
       fechaNacimiento: "",
-      email: ""
+      email: "",
     });
     setPacienteExistente(null);
     setMostrarFormPaciente(false);
-
-    alert("Cita agendada exitosamente");
+    alert("Cita agendada");
     cargarTodo();
   };
 
-  const buscarCitas = () => {
-    if (!filtroMedicoId) {
-      alert("Por favor seleccione un especialista");
+  // ========== HORAS DISPONIBLES (para crear cita) ==========
+  useEffect(() => {
+    if (medicoId && fecha) {
+      const cargarHoras = async () => {
+        const horas = await getHorasDisponibles(Number(medicoId), fecha);
+        setHorasDisponibles(horas);
+        const medicoSel = medicos.find((m: any) => m.id === Number(medicoId));
+        const config = medicoSel?.configuracion;
+        if (!config) {
+          setHorasDelTurno([]);
+          return;
+        }
+        const diasAtencion: string[] = Array.isArray(config.diasAtencion) ? config.diasAtencion : [];
+        const normalizar = (valor: string) =>
+          valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+        const [anio, mes, dia] = fecha.split("-").map(Number);
+        const fechaLocal = new Date(anio, mes - 1, dia);
+        const diasSemana = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
+        const diaSeleccionado = diasSemana[fechaLocal.getDay()];
+        const atiende = diasAtencion.map((d) => normalizar(d)).includes(normalizar(diaSeleccionado));
+        if (!atiende) {
+          setHorasDelTurno([]);
+          return;
+        }
+        const [inicioH, inicioM] = (config.horaInicio || "08:00").split(":").map(Number);
+        const [finH, finM] = (config.horaFin || "17:00").split(":").map(Number);
+        const intervalo = Number(config.intervaloMinutos) || 30;
+        let horaActual = inicioH * 60 + inicioM;
+        const finTotal = finH * 60 + finM;
+        const todas: string[] = [];
+        while (horaActual < finTotal) {
+          const h = Math.floor(horaActual / 60);
+          const m = horaActual % 60;
+          todas.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
+          horaActual += intervalo;
+        }
+        setHorasDelTurno(todas);
+      };
+      cargarHoras();
+    } else {
+      setHorasDisponibles([]);
+      setHorasDelTurno([]);
     }
-  };
+  }, [medicoId, fecha, medicos]);
+
+  useEffect(() => {
+    if (hora && !horasDisponibles.includes(hora)) setHora("");
+  }, [hora, horasDisponibles]);
 
   const horasOcupadas = horasDelTurno.filter((h) => !horasDisponibles.includes(h));
   const totalHoras = horasDelTurno.length;
   const totalDisponibles = horasDisponibles.length;
   const totalOcupadas = horasOcupadas.length;
 
+  // ========== FUNCIONES PARA REAGENDAR ==========
+  useEffect(() => {
+    if (citaSeleccionada && nuevaFechaReag) {
+      const cargarHorasReag = async () => {
+        setCargandoHorasReag(true);
+        try {
+          const horas = await getHorasDisponibles(citaSeleccionada.medicoId, nuevaFechaReag);
+          setHorasDisponiblesReag(horas);
+        } catch (error) {
+          setHorasDisponiblesReag([]);
+        } finally {
+          setCargandoHorasReag(false);
+        }
+      };
+      cargarHorasReag();
+    } else {
+      setHorasDisponiblesReag([]);
+    }
+  }, [citaSeleccionada, nuevaFechaReag]);
+
+  const abrirModalReagendar = (cita: any) => {
+    setCitaSeleccionada(cita);
+    setNuevaFechaReag(cita.fecha);
+    setNuevaHoraReag(cita.hora);
+    setMostrarModalReagendar(true);
+  };
+
+  const reagendarCita = async () => {
+    if (!citaSeleccionada) return;
+    if (!nuevaFechaReag || !nuevaHoraReag) {
+      alert("Seleccione nueva fecha y hora");
+      return;
+    }
+    setCargandoReagendar(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:3000/citas/${citaSeleccionada.id}/reagendar`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fecha: nuevaFechaReag, hora: nuevaHoraReag }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Error al reagendar");
+      }
+      alert("Cita reagendada");
+      setMostrarModalReagendar(false);
+      cargarTodo();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setCargandoReagendar(false);
+    }
+  };
+
+  // ========== FUNCIONES PARA HISTORIAL ==========
+  const verHistorial = async (citaId: number) => {
+    setMostrarModalHistorial(true);
+    setCargandoHistorial(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:3000/citas/${citaId}/historial`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error al cargar historial");
+      const data = await res.json();
+      setHistorial(data);
+    } catch (error) {
+      console.error(error);
+      alert("Error al cargar historial");
+      setHistorial([]);
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  // ========== RENDER ==========
   return (
     <div>
       <div className="page-header">
@@ -230,278 +307,169 @@ function Citas() {
 
       <div className="tab-container">
         <div className="tab-buttons">
-          <button 
-            className={`tab-btn ${mostrandoListado ? "active" : ""}`}
-            onClick={() => setMostrandoListado(true)}
-          >
+          <button className={`tab-btn ${mostrandoListado ? "active" : ""}`} onClick={() => setMostrandoListado(true)}>
             Consultar Citas
           </button>
-          <button 
-            className={`tab-btn ${!mostrandoListado ? "active" : ""}`}
-            onClick={() => setMostrandoListado(false)}
-          >
+          <button className={`tab-btn ${!mostrandoListado ? "active" : ""}`} onClick={() => setMostrandoListado(false)}>
             Nueva Cita
           </button>
         </div>
       </div>
 
       {mostrandoListado ? (
-        <div>
-          <div className="card-custom">
-            <h4>Buscar Citas</h4>
-            
-            <div className="form-group">
-              <label>Especialista</label>
-              <select
-                value={filtroMedicoId}
-                onChange={(e) => setFiltroMedicoId(e.target.value)}
-              >
-                <option value="">Seleccionar especialista</option>
-                {medicos.map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} - {m.especialidad}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Fecha</label>
-              <input
-                type="date"
-                value={filtroFecha}
-                onChange={(e) => setFiltroFecha(e.target.value)}
-              />
-            </div>
-
-            <button className="btn btn-primary" onClick={buscarCitas}>
-              Buscar
+        <div className="card-custom">
+          <div className="result-header">
+            <h4>Listado de Citas</h4>
+            <button className="btn btn-secondary" onClick={cambiarOrden}>
+              Ordenar {orden === "asc" ? "↑" : "↓"}
             </button>
           </div>
-
-          <div className="card-custom">
-            <div className="result-header">
-              <h4>Resultados</h4>
-              <span className="result-count">{citasFiltradas.length} cita{citasFiltradas.length !== 1 ? "s" : ""}</span>
-            </div>
-            
-            {citasFiltradas.length > 0 ? (
+          {citasMostrar.length === 0 ? (
+            <div className="empty-state"><p>No hay citas</p></div>
+          ) : (
+            <>
               <div className="table-wrapper">
                 <table className="data-table">
                   <thead>
-                    <tr>
-                      <th>Paciente</th>
-                      <th>Hora</th>
-                      <th>Estado</th>
-                      <th>Motivo</th>
-                    </tr>
+                    <tr><th>Paciente</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Motivo</th><th>Acciones</th></tr>
                   </thead>
                   <tbody>
-                    {citasFiltradas.map((cita: any) => {
-                      const paciente = pacientes.find(p => p.id === cita.pacienteId);
+                    {citasMostrar.map((cita) => {
+                      const paciente = pacientes.find((p) => p.id === cita.pacienteId);
                       return (
                         <tr key={cita.id}>
-                          <td>{paciente?.nombres} {paciente?.apellidos || paciente?.nombre}</td>
+                          <td>{paciente?.nombres} {paciente?.apellidos}</td>
+                          <td>{cita.fecha}</td>
                           <td>{cita.hora}</td>
-                          <td>
-                            <span className={`badge ${cita.estado === "AGENDADA" ? "badge-warning" : "badge-success"}`}>
-                              {cita.estado === "AGENDADA" ? "Programada" : "Confirmada"}
-                            </span>
-                          </td>
+                          <td><span className={`badge ${cita.estado === "AGENDADA" ? "badge-warning" : "badge-success"}`}>{cita.estado === "AGENDADA" ? "Programada" : "Confirmada"}</span></td>
                           <td>{cita.descripcion || "---"}</td>
+                          <td>
+                            <button className="btn btn-secondary btn-sm" style={{ marginRight: 8 }} onClick={() => abrirModalReagendar(cita)}>Reagendar</button>
+                            <button className="btn btn-info btn-sm" onClick={() => verHistorial(cita.id)}>Historial</button>
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="empty-state">
-                <p>No hay citas programadas para esta fecha</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 20 }}>
+                <button className="btn btn-secondary" disabled={page === 1} onClick={() => cambiarPagina(page - 1)}>Anterior</button>
+                <span>Página {page} de {totalPages}</span>
+                <button className="btn btn-secondary" disabled={page === totalPages} onClick={() => cambiarPagina(page + 1)}>Siguiente</button>
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       ) : (
+        // ===== FORMULARIO DE NUEVA CITA =====
         <div>
           <div className="card-custom">
             <h4>Datos de la Cita</h4>
-
-            <div className="form-group">
-              <label>Fecha</label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-              />
-            </div>
-
+            <div className="form-group"><label>Fecha</label><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
             <div className="form-group">
               <label>Hora</label>
-              <select
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
-                disabled={horasDelTurno.length === 0}
-              >
+              <select value={hora} onChange={(e) => setHora(e.target.value)} disabled={horasDelTurno.length === 0}>
                 <option value="">Seleccionar hora</option>
                 {horasDelTurno.map((h) => {
                   const ocupada = !horasDisponibles.includes(h);
-                  return (
-                    <option key={h} value={h} disabled={ocupada}>
-                      {ocupada ? `${h} (ocupada)` : h}
-                    </option>
-                  );
+                  return <option key={h} value={h} disabled={ocupada}>{ocupada ? `${h} (ocupada)` : h}</option>;
                 })}
               </select>
               {medicoId && fecha && totalHoras > 0 && (
-                <div className="horario-info-banner" role="status" aria-live="polite">
-                  <div className="horario-info-icon" aria-hidden="true">🕒</div>
+                <div className="horario-info-banner">
+                  <div className="horario-info-icon">🕒</div>
                   <div className="horario-info-content">
                     <p className="horario-info-title">Horarios del día</p>
-                    <p className="horario-info-text">
-                      Disponibles: <strong>{totalDisponibles}</strong> · Ocupadas: <strong>{totalOcupadas}</strong>
-                    </p>
-                    {totalOcupadas > 0 && (
-                      <p className="horario-info-note">
-                        Las horas ocupadas aparecen en gris y no se pueden seleccionar.
-                      </p>
-                    )}
+                    <p className="horario-info-text">Disponibles: <strong>{totalDisponibles}</strong> · Ocupadas: <strong>{totalOcupadas}</strong></p>
+                    {totalOcupadas > 0 && <p className="horario-info-note">Las horas ocupadas aparecen en gris y no se pueden seleccionar.</p>}
                   </div>
                 </div>
               )}
             </div>
-
             <div className="form-group">
               <label>Especialista</label>
-              <select
-                value={medicoId}
-                onChange={(e) => setMedicoId(e.target.value)}
-              >
+              <select value={medicoId} onChange={(e) => setMedicoId(e.target.value)}>
                 <option value="">Seleccionar especialista</option>
-                {medicos.map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre} - {m.especialidad}
-                  </option>
-                ))}
+                {medicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre} - {m.especialidad}</option>)}
               </select>
             </div>
           </div>
 
           <div className="card-custom">
             <h4>Información del Paciente</h4>
-            
             <div className="form-group">
               <label>Número de documento</label>
-              <input
-                type="text"
-                placeholder="Documento de identidad"
-                value={nuevoPaciente.documento}
-                onChange={(e) => {
-                  setNuevoPaciente({...nuevoPaciente, documento: e.target.value});
-                  buscarPaciente(e.target.value);
-                }}
-              />
+              <input type="text" placeholder="Documento de identidad" value={nuevoPaciente.documento} onChange={(e) => { setNuevoPaciente({...nuevoPaciente, documento: e.target.value}); buscarPaciente(e.target.value); }} />
             </div>
-            
             {buscandoPaciente && <div className="loading-spinner">Buscando...</div>}
-
-            {pacienteExistente && (
-              <div className="success-message">
-                <span>✓</span>
-                <p>{pacienteExistente.nombres} {pacienteExistente.apellidos} - {pacienteExistente.celular}</p>
-              </div>
-            )}
-
+            {pacienteExistente && <div className="success-message"><span>✓</span><p>{pacienteExistente.nombres} {pacienteExistente.apellidos} - {pacienteExistente.celular}</p></div>}
             {mostrarFormPaciente && nuevoPaciente.documento && (
               <div className="new-patient-form">
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Nombres</label>
-                    <input
-                      type="text"
-                      placeholder="Nombres"
-                      value={nuevoPaciente.nombres}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, nombres: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Apellidos</label>
-                    <input
-                      type="text"
-                      placeholder="Apellidos"
-                      value={nuevoPaciente.apellidos}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, apellidos: e.target.value})}
-                    />
-                  </div>
+                  <div className="form-group"><label>Nombres</label><input type="text" value={nuevoPaciente.nombres} onChange={e => setNuevoPaciente({...nuevoPaciente, nombres: e.target.value})} /></div>
+                  <div className="form-group"><label>Apellidos</label><input type="text" value={nuevoPaciente.apellidos} onChange={e => setNuevoPaciente({...nuevoPaciente, apellidos: e.target.value})} /></div>
                 </div>
-
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Celular</label>
-                    <input
-                      type="tel"
-                      placeholder="Celular"
-                      value={nuevoPaciente.celular}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, celular: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Género</label>
-                    <select
-                      value={nuevoPaciente.genero}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, genero: e.target.value as "Hombre" | "Mujer" | "Otro"})}
-                    >
-                      <option value="Hombre">Hombre</option>
-                      <option value="Mujer">Mujer</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  </div>
+                  <div className="form-group"><label>Celular</label><input type="tel" value={nuevoPaciente.celular} onChange={e => setNuevoPaciente({...nuevoPaciente, celular: e.target.value})} /></div>
+                  <div className="form-group"><label>Género</label><select value={nuevoPaciente.genero} onChange={e => setNuevoPaciente({...nuevoPaciente, genero: e.target.value as Genero})}><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="Otro">Otro</option></select></div>
                 </div>
-
                 <div className="form-row">
-                  <div className="form-group">
-                    <label>Fecha de nacimiento</label>
-                    <input
-                      type="date"
-                      value={nuevoPaciente.fechaNacimiento}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, fechaNacimiento: e.target.value})}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Correo electrónico</label>
-                    <input
-                      type="email"
-                      placeholder="correo@ejemplo.com"
-                      value={nuevoPaciente.email}
-                      onChange={(e) => setNuevoPaciente({...nuevoPaciente, email: e.target.value})}
-                    />
-                  </div>
+                  <div className="form-group"><label>Fecha de nacimiento</label><input type="date" value={nuevoPaciente.fechaNacimiento} onChange={e => setNuevoPaciente({...nuevoPaciente, fechaNacimiento: e.target.value})} /></div>
+                  <div className="form-group"><label>Correo electrónico</label><input type="email" value={nuevoPaciente.email} onChange={e => setNuevoPaciente({...nuevoPaciente, email: e.target.value})} /></div>
                 </div>
-
-                <button className="btn btn-primary" onClick={registrarNuevoPaciente}>
-                  Registrar Paciente
-                </button>
+                <button className="btn btn-primary" onClick={registrarNuevoPaciente}>Registrar Paciente</button>
               </div>
             )}
           </div>
 
           <div className="card-custom">
-            <div className="form-group">
-              <label>Motivo de consulta</label>
-              <input
-                placeholder="Describa el motivo de la consulta"
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-              />
-            </div>
+            <div className="form-group"><label>Motivo de consulta</label><input placeholder="Describa el motivo" value={descripcion} onChange={e => setDescripcion(e.target.value)} /></div>
+            <button className="btn btn-primary btn-block" onClick={crear} disabled={!fecha || !hora || !medicoId || !pacienteId}>Agendar Cita</button>
+          </div>
+        </div>
+      )}
 
-            <button 
-              className="btn btn-primary btn-block" 
-              onClick={crear}
-              disabled={!fecha || !hora || !medicoId || !pacienteId}
-            >
-              Agendar Cita
-            </button>
+      {/* Modal Reagendar */}
+      {mostrarModalReagendar && citaSeleccionada && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Reagendar Cita</h3>
+            <p><strong>Paciente:</strong> {citaSeleccionada.paciente?.nombres} {citaSeleccionada.paciente?.apellidos}</p>
+            <p><strong>Médico:</strong> {citaSeleccionada.medico?.nombre}</p>
+            <div className="form-group"><label>Nueva fecha</label><input type="date" value={nuevaFechaReag} onChange={e => setNuevaFechaReag(e.target.value)} /></div>
+            <div className="form-group">
+              <label>Nueva hora</label>
+              <select value={nuevaHoraReag} onChange={e => setNuevaHoraReag(e.target.value)} disabled={cargandoHorasReag}>
+                <option value="">Seleccione hora</option>
+                {horasDisponiblesReag.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+              {cargandoHorasReag && <small>Cargando horarios...</small>}
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-primary" onClick={reagendarCita} disabled={cargandoReagendar}>{cargandoReagendar ? "Guardando..." : "Guardar cambios"}</button>
+              <button className="btn btn-secondary" onClick={() => setMostrarModalReagendar(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial */}
+      {mostrarModalHistorial && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Historial de cambios</h3>
+            {cargandoHistorial ? <p>Cargando...</p> : historial.length === 0 ? <p>No hay cambios registrados.</p> : (
+              <table className="data-table">
+                <thead><tr><th>Campo</th><th>Valor anterior</th><th>Valor nuevo</th><th>Modificado por</th><th>Fecha</th></tr></thead>
+                <tbody>
+                  {historial.map((h) => (
+                    <tr key={h.id}><td>{h.campo}</td><td>{h.valorAnterior}</td><td>{h.valorNuevo}</td><td>{h.modificadoPor}</td><td>{new Date(h.createdAt).toLocaleString()}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <div className="modal-buttons"><button className="btn btn-secondary" onClick={() => setMostrarModalHistorial(false)}>Cerrar</button></div>
           </div>
         </div>
       )}

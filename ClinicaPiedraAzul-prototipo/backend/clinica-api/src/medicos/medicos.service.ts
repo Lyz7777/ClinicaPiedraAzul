@@ -3,16 +3,17 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MedicosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prismaService: PrismaService) {}
 
-  async findAll() {
+  private get prisma() {
+    return this.prismaService.prisma;
+  }
+
+  async findAll(order: 'asc' | 'desc' = 'asc') {
     const medicos = await this.prisma.medico.findMany({
-      include: {
-        configuracion: true,
-      },
+      orderBy: { nombre: order },
+      include: { configuracion: true },
     });
-    
-    // Convertir diasAtencion de string a array para el frontend
     return medicos.map(medico => ({
       ...medico,
       configuracion: medico.configuracion ? {
@@ -25,14 +26,9 @@ export class MedicosService {
   async findOne(id: number) {
     const medico = await this.prisma.medico.findUnique({
       where: { id },
-      include: {
-        configuracion: true,
-      },
+      include: { configuracion: true },
     });
-    
     if (!medico) throw new NotFoundException('Médico no encontrado');
-    
-    // Convertir diasAtencion de string a array
     return {
       ...medico,
       configuracion: medico.configuracion ? {
@@ -48,10 +44,7 @@ export class MedicosService {
 
   async update(id: number, data: { nombre?: string; especialidad?: string }) {
     await this.findOne(id);
-    return this.prisma.medico.update({
-      where: { id },
-      data,
-    });
+    return this.prisma.medico.update({ where: { id }, data });
   }
 
   async remove(id: number) {
@@ -61,10 +54,7 @@ export class MedicosService {
 
   async getConfiguracion(id: number) {
     await this.findOne(id);
-    const config = await this.prisma.configuracionMedico.findUnique({
-      where: { medicoId: id },
-    });
-
+    const config = await this.prisma.configuracionMedico.findUnique({ where: { medicoId: id } });
     if (!config) {
       return {
         medicoId: id,
@@ -74,28 +64,12 @@ export class MedicosService {
         intervaloMinutos: 30,
       };
     }
-
-    // Convertir diasAtencion de string a array
-    return {
-      ...config,
-      diasAtencion: config.diasAtencion.split(','),
-    };
+    return { ...config, diasAtencion: config.diasAtencion.split(',') };
   }
 
-  async saveConfiguracion(
-    id: number,
-    data: {
-      diasAtencion: string[];
-      horaInicio: string;
-      horaFin: string;
-      intervaloMinutos: number;
-    }
-  ) {
+  async saveConfiguracion(id: number, data: any) {
     await this.findOne(id);
-
-    // Convertir array a string para guardar en BD
     const diasAtencionString = data.diasAtencion.join(',');
-
     return this.prisma.configuracionMedico.upsert({
       where: { medicoId: id },
       update: {

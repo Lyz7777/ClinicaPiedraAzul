@@ -2,19 +2,19 @@ import { IsString, IsOptional, IsEmail, IsIn } from 'class-validator';
 
 export class CreatePacienteDto {
   @IsString()
-  documento: string;
+  documento!: string;
 
   @IsString()
-  nombres: string;
+  nombres!: string;
 
   @IsString()
-  apellidos: string;
+  apellidos!: string;
 
   @IsString()
-  celular: string;
+  celular!: string;
 
   @IsIn(['Hombre', 'Mujer', 'Otro'])
-  genero: string;
+  genero!: string;
 
   @IsOptional()
   @IsString()
