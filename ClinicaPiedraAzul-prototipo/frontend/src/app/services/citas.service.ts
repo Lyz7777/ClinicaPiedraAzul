@@ -1,14 +1,21 @@
+import { getAuthHeaders } from "../../auth/authService";
+
 const URL = "http://localhost:3000/citas";
+
+const getHeaders = async (withBody = false) => {
+  const authHeaders = await getAuthHeaders();
+  return withBody ? { "Content-Type": "application/json", ...authHeaders } : { ...authHeaders };
+};
 
 // Obtener todas las citas
 export const getCitas = async () => {
-  const res = await fetch(URL);
+  const res = await fetch(URL, { headers: await getHeaders() });
   return res.json();
 };
 
 // Obtener citas por médico y fecha (Requisito 1)
 export const getCitasByMedicoAndFecha = async (medicoId: number, fecha: string) => {
-  const res = await fetch(`${URL}?medicoId=${medicoId}&fecha=${fecha}`);
+  const res = await fetch(`${URL}?medicoId=${medicoId}&fecha=${fecha}`, { headers: await getHeaders() });
   return res.json();
 };
 
@@ -23,7 +30,7 @@ export const crearCita = async (data: {
 }) => {
   const res = await fetch(URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify(data)
   });
 
@@ -47,7 +54,7 @@ export const crearCita = async (data: {
 
 // Obtener horas disponibles para un médico en una fecha (Requisito 2)
 export const getHorasDisponibles = async (medicoId: number, fecha: string) => {
-  const res = await fetch(`${URL}/horas-disponibles?medicoId=${medicoId}&fecha=${fecha}`);
+  const res = await fetch(`${URL}/horas-disponibles?medicoId=${medicoId}&fecha=${fecha}`, { headers: await getHeaders() });
   return res.json();
 };
 
@@ -55,7 +62,7 @@ export const getHorasDisponibles = async (medicoId: number, fecha: string) => {
 export const updateEstadoCita = async (id: number, estado: string) => {
   const res = await fetch(`${URL}/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify({ estado })
   });
   return res.json();
@@ -63,5 +70,5 @@ export const updateEstadoCita = async (id: number, estado: string) => {
 
 // Eliminar cita
 export const eliminarCita = async (id: number) => {
-  await fetch(`${URL}/${id}`, { method: "DELETE" });
+  await fetch(`${URL}/${id}`, { method: "DELETE", headers: await getHeaders() });
 };

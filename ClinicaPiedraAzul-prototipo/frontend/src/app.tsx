@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Clock3,
@@ -25,12 +25,15 @@ import Citas from "./app/pages/citas";
 import Medicos from "./app/pages/medicos";
 import Pacientes from "./app/pages/pacientes";
 import AgendarWeb from "./app/components/AgendarWeb";
+import AuthCallback from "./auth/AuthCallback";
+import { useAuth } from "./auth/useAuth";
+import type { UserRole } from "./auth/authService";
 import "./style.css";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [rolActivo, setRolActivo] = useState<"admin" | "agendador" | "paciente">("admin");
+  const { isAuthenticated, isLoading, getUserRole, getUserRoles, getRawRoles, logout, user } = useAuth();
   const [vista, setVista] = useState("citas");
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
   const metricasVista: Record<string, { titulo: string; valor: string; nota: string; icono: any }[]> = {
     citas: [
@@ -60,31 +63,119 @@ function App() {
     ],
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const rol = localStorage.getItem("rol") as "admin" | "agendador" | "paciente" | null;
-    if (token || rol === "paciente") {
-      if (rol) {
-        setRolActivo(rol);
-      }
-      if (rol === "paciente") setVista("agendar-web");
-      if (rol === "admin") setVista("configuracion");
-      if (rol === "agendador") setVista("citas");
-      setIsLoggedIn(true);
-    }
-  }, []);
+  const availableRoles = getUserRoles();
+  const rawRoles = getRawRoles();
+  const authRole = selectedRole ?? getUserRole();
+  const rolActivo = authRole === "admin"
+    ? "admin"
+    : authRole === "scheduler"
+    ? "agendador"
+    : authRole === "patient"
+    ? "paciente"
+    : null;
 
-  if (!isLoggedIn) {
+  useEffect(() => {
+    if (!rolActivo) return;
+    if (rolActivo === "paciente") setVista("agendar-web");
+    if (rolActivo === "admin") setVista("configuracion");
+    if (rolActivo === "agendador") setVista("citas");
+  }, [rolActivo]);
+
+  useEffect(() => {
+    setSelectedRole(null);
+  }, [user?.sub]);
+
+  if (isLoading) {
+    return <AuthCallback />;
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  if (availableRoles.length === 0) {
+    return <AuthCallback />;
+  }
+
+  if (availableRoles.length > 0 && !selectedRole) {
     return (
-      <Login
-        onLogin={(rol) => {
-          setRolActivo(rol);
-          if (rol === "paciente") setVista("agendar-web");
-          if (rol === "admin") setVista("configuracion");
-          if (rol === "agendador") setVista("citas");
-          setIsLoggedIn(true);
-        }}
-      />
+      <div className="login-shell">
+        <section className="login-panel login-panel-left">
+          <div className="login-card">
+            <div className="login-header">
+              <div className="login-icon"><UserCog size={30} /></div>
+              <h1>Elige tu rol</h1>
+              <p>Selecciona el panel con el que deseas ingresar.</p>
+            </div>
+            <div className="login-form">
+              {availableRoles.map((role) => (
+                <button
+                  key={role}
+                  className="login-submit-btn"
+                  style={{ marginBottom: "0.75rem" }}
+                  onClick={() => setSelectedRole(role)}
+                >
+                  {role === "admin"
+                    ? "Ingresar como Administrador"
+                    : role === "scheduler"
+                    ? "Ingresar como Agendador"
+                    : "Ingresar como Paciente"}
+                </button>
+              ))}
+              <p style={{ marginBottom: "0.75rem", opacity: 0.7 }}>
+                Roles detectados: {rawRoles.length ? rawRoles.join(", ") : "ninguno"}
+              </p>
+              <button
+                className="login-submit-btn"
+                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+              >
+                Cerrar sesion
+              </button>
+            </div>
+          </div>
+        </section>
+        <section className="login-panel login-panel-right">
+          <div className="hero-overlay" />
+          <div className="hero-content">
+            <h2>Panel personalizado</h2>
+            <p>Selecciona el rol adecuado para continuar.</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (!rolActivo) {
+    return (
+      <div className="login-shell">
+        <section className="login-panel login-panel-left">
+          <div className="login-card">
+            <div className="login-header">
+              <div className="login-icon"><UserCog size={30} /></div>
+              <h1>Acceso denegado</h1>
+              <p>Tu cuenta no tiene un rol valido para este panel.</p>
+            </div>
+            <div className="login-form">
+              <p style={{ marginBottom: "0.75rem", opacity: 0.75 }}>
+                Roles detectados: {availableRoles.length ? availableRoles.join(", ") : "ninguno"}
+              </p>
+            </div>
+            <button
+              className="login-submit-btn"
+              onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            >
+              Cerrar sesion
+            </button>
+          </div>
+        </section>
+        <section className="login-panel login-panel-right">
+          <div className="hero-overlay" />
+          <div className="hero-content">
+            <h2>Acceso restringido</h2>
+            <p>Contacta al administrador para habilitar permisos.</p>
+          </div>
+        </section>
+      </div>
     );
   }
 
@@ -104,6 +195,10 @@ function App() {
         return <Citas />;
     }
   };
+
+  if (!vista) {
+    return <AuthCallback />;
+  }
 
   return (
     <div className="app-container">

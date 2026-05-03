@@ -1,14 +1,21 @@
+import { getAuthHeaders } from "../../auth/authService";
+
 const URL = "http://localhost:3000/medicos";
+
+const getHeaders = async (withBody = false) => {
+  const authHeaders = await getAuthHeaders();
+  return withBody ? { "Content-Type": "application/json", ...authHeaders } : { ...authHeaders };
+};
 
 // Obtener todos los médicos
 export const getMedicos = async () => {
-  const res = await fetch(URL);
+  const res = await fetch(URL, { headers: await getHeaders() });
   return res.json();
 };
 
 // Obtener médico por ID
 export const getMedicoById = async (id: number) => {
-  const res = await fetch(`${URL}/${id}`);
+  const res = await fetch(`${URL}/${id}`, { headers: await getHeaders() });
   return res.json();
 };
 
@@ -19,7 +26,7 @@ export const crearMedico = async (data: {
 }) => {
   const res = await fetch(URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify(data)
   });
   return res.json();
@@ -32,7 +39,7 @@ export const actualizarMedico = async (id: number, data: {
 }) => {
   const res = await fetch(`${URL}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify(data)
   });
   return res.json();
@@ -40,13 +47,13 @@ export const actualizarMedico = async (id: number, data: {
 
 // Eliminar médico
 export const eliminarMedico = async (id: number) => {
-  await fetch(`${URL}/${id}`, { method: "DELETE" });
+  await fetch(`${URL}/${id}`, { method: "DELETE", headers: await getHeaders() });
 };
 
 // Obtener configuración de un médico
 export const getConfiguracionMedico = async (id: number) => {
   try {
-    const res = await fetch(`${URL}/${id}/configuracion`);
+    const res = await fetch(`${URL}/${id}/configuracion`, { headers: await getHeaders() });
     if (res.status === 404) return null;
     return res.json();
   } catch {
@@ -63,7 +70,7 @@ export const guardarConfiguracionMedico = async (id: number, config: {
 }) => {
   const res = await fetch(`${URL}/${id}/configuracion`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify(config)
   });
   return res.json();
@@ -73,7 +80,7 @@ export const guardarConfiguracionMedico = async (id: number, config: {
 export const guardarConfiguracionGlobal = async (ventanaSemanas: number) => {
   const res = await fetch("http://localhost:3000/configuracion/global", {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: await getHeaders(true),
     body: JSON.stringify({ ventanaSemanas })
   });
   return res.json();
@@ -82,7 +89,7 @@ export const guardarConfiguracionGlobal = async (ventanaSemanas: number) => {
 // Obtener configuración global
 export const getConfiguracionGlobal = async () => {
   try {
-    const res = await fetch("http://localhost:3000/configuracion/global");
+    const res = await fetch("http://localhost:3000/configuracion/global", { headers: await getHeaders() });
     if (res.status === 404) return { ventanaSemanas: 4 };
     return res.json();
   } catch {

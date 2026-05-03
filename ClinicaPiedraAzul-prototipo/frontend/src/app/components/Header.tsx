@@ -1,38 +1,18 @@
-import { useEffect, useState } from "react";
 import { Cross, LogOut, UserRound } from "lucide-react";
+import { useAuth } from "../../auth/useAuth";
 
 function Header() {
-  const [usuario, setUsuario] = useState("");
-  const [rol, setRol] = useState("");
+  const { user, getUserRole, logout } = useAuth();
   const fechaHoy = new Date().toLocaleDateString("es-CO", {
     weekday: "long",
     day: "2-digit",
     month: "long",
   });
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const savedRole = localStorage.getItem("rol") || "admin";
-    const savedUsername = localStorage.getItem("username") || "Admin";
-    setRol(savedRole);
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUsuario(payload.username || payload.sub || "Admin");
-      } catch {
-        setUsuario(savedUsername);
-      }
-    } else {
-      setUsuario(savedUsername);
-    }
-  }, []);
-
-  const cerrarSesion = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("rol");
-    localStorage.removeItem("username");
-    window.location.reload();
-  };
+  const role = getUserRole();
+  const roleLabel = role === "admin" ? "admin" : role === "scheduler" ? "agendador" : role === "patient" ? "paciente" : "";
+  const displayName = user?.name || user?.email || "Usuario";
+  const email = user?.email || "";
 
   return (
     <header className="header">
@@ -58,12 +38,18 @@ function Header() {
         </div>
         <div className="user-info">
           <span className="user-greeting">Bienvenido</span>
-          <span className="user-name">{usuario}</span>
-          <span className="user-greeting" style={{ textTransform: "capitalize" }}>
-            {rol}
-          </span>
+          <span className="user-name">{displayName}</span>
+          {email && <span className="user-greeting">{email}</span>}
+          {roleLabel && (
+            <span className="user-greeting" style={{ textTransform: "capitalize" }}>
+              {roleLabel}
+            </span>
+          )}
         </div>
-        <button className="logout-btn" onClick={cerrarSesion}>
+        <button
+          className="logout-btn"
+          onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+        >
           <LogOut size={14} />
           Salir
         </button>
