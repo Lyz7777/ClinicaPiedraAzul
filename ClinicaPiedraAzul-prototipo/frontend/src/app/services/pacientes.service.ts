@@ -39,6 +39,11 @@ export const buscarPacientePorDocumento = async (documento: string) => {
       if (res.status === 404) return null;
       throw new Error('Error al buscar paciente');
     }
+    if (res.status === 204) return null;
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      return null;
+    }
     return res.json();
   } catch (error) {
     console.error('Error buscando paciente:', error);

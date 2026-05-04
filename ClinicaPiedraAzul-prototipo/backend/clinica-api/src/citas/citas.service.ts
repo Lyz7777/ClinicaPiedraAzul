@@ -183,9 +183,12 @@ export class CitasService {
     return horasDisponibles;
   }
 
-  async exportarCitasACSV(medicoId: number, fecha: string) {
+  async exportarCitasACSV(medicoId?: number, fecha?: string) {
+    const where: { medicoId?: number; fecha?: string } = {};
+    if (typeof medicoId === 'number' && !isNaN(medicoId)) where.medicoId = medicoId;
+    if (fecha) where.fecha = fecha;
     const citas = await this.prisma.cita.findMany({
-      where: { medicoId, fecha },
+      where,
       include: { paciente: true, medico: true },
       orderBy: { hora: 'asc' },
     });
@@ -215,7 +218,7 @@ export class CitasService {
       columnas.join(','),
       ...filas.map(fila => fila.map(celda => `"${celda}"`).join(',')),
     ].join('\n');
-    return csvContent;
+    return `\ufeff${csvContent}`;
   }
 
   // ========== NUEVOS MÉTODOS (reagendamiento e historial) ==========

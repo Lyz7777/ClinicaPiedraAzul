@@ -1445,7 +1445,8 @@ small {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(12, 8, 20, 0.9);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1453,14 +1454,22 @@ small {
 }
 
 .modal-content {
-  background: white;
+  background: #ffffff;
+  border: 1px solid var(--violet-border);
   border-radius: 24px;
   padding: 28px;
   width: 90%;
-  max-width: 500px;
+  max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 24px 50px rgba(18, 12, 28, 0.35);
+}
+
+.modal-content h3,
+.modal-content p,
+.modal-content label,
+.modal-content strong {
+  color: white;
 }
 
 .modal-buttons {

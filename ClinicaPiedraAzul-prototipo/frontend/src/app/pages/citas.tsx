@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCitas, crearCita, getHorasDisponibles } from "../services/citas.service";
 import { getPacientes, buscarPacientePorDocumento, crearPaciente } from "../services/pacientes.service";
 import { getMedicos } from "../services/medicos.service";
+import { getAuthHeaders } from "../../auth/authService";
 
 type Genero = "Hombre" | "Mujer" | "Otro";
 
@@ -52,6 +53,8 @@ function Citas() {
   const [mostrarModalHistorial, setMostrarModalHistorial] = useState(false);
   const [historial, setHistorial] = useState<any[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
+  const [exportMedicoId, setExportMedicoId] = useState("");
+  const [exportFecha, setExportFecha] = useState("");
 
   // ========== CARGAR DATOS INICIALES ==========
   const cargarTodo = async () => {
@@ -60,9 +63,14 @@ function Citas() {
       getPacientes(),
       getMedicos(),
     ]);
-    setCitas(citasData);
-    setPacientes(pacientesData);
-    setMedicos(medicosData);
+    const normalizeList = (data: any) => {
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      return [];
+    };
+    setCitas(normalizeList(citasData));
+    setPacientes(normalizeList(pacientesData));
+    setMedicos(normalizeList(medicosData));
   };
 
   useEffect(() => {
@@ -71,6 +79,9 @@ function Citas() {
 
   // ========== PAGINACIÓN Y ORDEN LOCAL ==========
   const getCitasPaginadas = () => {
+    if (!Array.isArray(citas)) {
+      return [];
+    }
     let citasOrdenadas = [...citas];
     citasOrdenadas.sort((a, b) => {
       const compareFecha = orden === "asc"
@@ -217,6 +228,9 @@ function Citas() {
   const totalHoras = horasDelTurno.length;
   const totalDisponibles = horasDisponibles.length;
   const totalOcupadas = horasOcupadas.length;
+  const medicosUnicos = Array.from(
+    new Map(medicos.map((m: any) => [m.id, m])).values(),
+  );
 
   // ========== FUNCIONES PARA REAGENDAR ==========
   useEffect(() => {
@@ -253,12 +267,12 @@ function Citas() {
     }
     setCargandoReagendar(true);
     try {
-      const token = localStorage.getItem("token");
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`http://localhost:3000/citas/${citaSeleccionada.id}/reagendar`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...authHeaders,
         },
         body: JSON.stringify({ fecha: nuevaFechaReag, hora: nuevaHoraReag }),
       });
@@ -281,9 +295,9 @@ function Citas() {
     setMostrarModalHistorial(true);
     setCargandoHistorial(true);
     try {
-      const token = localStorage.getItem("token");
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`http://localhost:3000/citas/${citaId}/historial`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
       });
       if (!res.ok) throw new Error("Error al cargar historial");
       const data = await res.json();
@@ -294,6 +308,44 @@ function Citas() {
       setHistorial([]);
     } finally {
       setCargandoHistorial(false);
+    }
+  };
+
+  const exportarCsv = async () => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const params = new URLSearchParams();
+      if (exportMedicoId) params.set("medicoId", exportMedicoId);
+      if (exportFecha) params.set("fecha", exportFecha);
+      const res = await fetch(`http://localhost:3000/citas/exportar-csv?${params.toString()}`, {
+        headers: authHeaders,
+      });
+      if (!res.ok) {
+        let mensaje = "Error al exportar CSV";
+        try {
+          const error = await res.json();
+          if (typeof error?.message === "string") mensaje = error.message;
+        } catch {
+          // Sin cuerpo JSON.
+        }
+        throw new Error(mensaje);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const nombrePartes = [
+        "citas",
+        exportMedicoId ? `medico_${exportMedicoId}` : null,
+        exportFecha || null,
+      ].filter(Boolean);
+      anchor.href = url;
+      anchor.download = `${nombrePartes.join("_")}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(error?.message || "Error al exportar CSV");
     }
   };
 
@@ -320,9 +372,32 @@ function Citas() {
         <div className="card-custom">
           <div className="result-header">
             <h4>Listado de Citas</h4>
-            <button className="btn btn-secondary" onClick={cambiarOrden}>
-              Ordenar {orden === "asc" ? "↑" : "↓"}
-            </button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <select
+                value={exportMedicoId}
+                onChange={(e) => setExportMedicoId(e.target.value)}
+                className="date-input"
+              >
+                <option value="">Medico (opcional)</option>
+                {medicosUnicos.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={exportFecha}
+                onChange={(e) => setExportFecha(e.target.value)}
+                className="date-input"
+              />
+              <button className="btn btn-secondary" onClick={exportarCsv}>
+                Exportar CSV
+              </button>
+              <button className="btn btn-secondary" onClick={cambiarOrden}>
+                Ordenar {orden === "asc" ? "↑" : "↓"}
+              </button>
+            </div>
           </div>
           {citasMostrar.length === 0 ? (
             <div className="empty-state"><p>No hay citas</p></div>
@@ -391,7 +466,11 @@ function Citas() {
               <label>Especialista</label>
               <select value={medicoId} onChange={(e) => setMedicoId(e.target.value)}>
                 <option value="">Seleccionar especialista</option>
-                {medicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre} - {m.especialidad}</option>)}
+                {medicosUnicos.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre} - {m.especialidad}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

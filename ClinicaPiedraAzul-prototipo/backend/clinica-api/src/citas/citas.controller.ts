@@ -32,11 +32,16 @@ export class CitasController {
   @Get('exportar-csv')
   @Roles('admin', 'agendador')
   async exportarCsv(@Query('medicoId') medicoId: string, @Query('fecha') fecha: string, @Res() res: Response) {
-    if (!medicoId || !fecha) throw new BadRequestException('Faltan parámetros: medicoId y fecha');
     try {
-      const csv = await this.service.exportarCitasACSV(Number(medicoId), fecha);
+      const medicoIdNumber = medicoId ? Number(medicoId) : undefined;
+      const csv = await this.service.exportarCitasACSV(medicoIdNumber, fecha || undefined);
+      const nombrePartes = [
+        'citas',
+        medicoIdNumber ? `medico_${medicoIdNumber}` : null,
+        fecha || null,
+      ].filter(Boolean);
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename=citas_${medicoId}_${fecha}.csv`);
+      res.setHeader('Content-Disposition', `attachment; filename=${nombrePartes.join('_')}.csv`);
       res.send(csv);
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : 'Error interno';
