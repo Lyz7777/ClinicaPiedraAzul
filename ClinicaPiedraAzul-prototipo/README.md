@@ -28,7 +28,59 @@ Carpetas importantes:
 1. frontend
 2. backend/clinica-api
 
-## 3) Configuracion de base de datos
+## 3) Configuracion de login (Auth0)
+
+El login del frontend usa Auth0. Debes configurar variables de entorno en
+frontend/.env y backend/clinica-api/.env. Los valores base ya estan en los
+archivos .env.example para que queden versionados en Git.
+
+### 3.1 Frontend (.env)
+
+Copia el ejemplo y ajusta si hace falta:
+
+```powershell
+cd frontend
+Copy-Item .env.example .env
+```
+
+Contenido esperado:
+
+```env
+VITE_AUTH0_DOMAIN=dev-nz115b8posmhlw8u.us.auth0.com
+VITE_AUTH0_CLIENT_ID=qyP86VAZmE2VYx1YeqI1Lt4Y3J0raA3Q
+VITE_AUTH0_AUDIENCE=https://piedrazul-api
+```
+
+### 3.2 Backend (.env)
+
+Copia el ejemplo y ajusta si hace falta:
+
+```powershell
+cd backend/clinica-api
+Copy-Item .env.example .env
+```
+
+Contenido esperado:
+
+```env
+AUTH0_DOMAIN=dev-nz115b8posmhlw8u.us.auth0.com
+AUTH0_AUDIENCE=https://piedrazul-api
+```
+
+### 3.3 Configuracion en Auth0 (Dashboard)
+
+En la aplicacion de Auth0, completa:
+
+1. Allowed Callback URLs: http://localhost:5173
+2. Allowed Logout URLs: http://localhost:5173
+3. Allowed Web Origins: http://localhost:5173
+4. API Audience: https://piedrazul-api
+
+Si necesitas roles en el backend, agrega el claim
+https://piedrazul.com/roles con un arreglo de valores como admin, scheduler o
+patient.
+
+## 4) Configuracion de base de datos
 
 El backend usa SQLite local con Prisma.
 
@@ -42,7 +94,7 @@ Valor esperado:
 DATABASE_URL="file:./dev.db"
 ```
 
-## 4) Instalar dependencias
+## 5) Instalar dependencias
 
 ### 4.1 Backend
 
@@ -60,7 +112,7 @@ cd frontend
 npm install
 ```
 
-## 5) Inicializar base de datos
+## 6) Inicializar base de datos
 
 Desde backend/clinica-api:
 
@@ -71,7 +123,7 @@ npm run prisma:seed
 
 Esto crea la base SQLite y registra usuario administrador inicial.
 
-## 6) Levantar el proyecto
+## 7) Levantar el proyecto
 
 Necesitas dos terminales abiertas.
 
@@ -99,14 +151,15 @@ Frontend esperado en:
 
 1. http://localhost:5173
 
-## 7) Credenciales de acceso
+## 8) Credenciales de acceso
 
-Credenciales de prueba:
+Con Auth0, inicia sesion con un usuario creado en tu tenant. Si estas usando
+el flujo local con seed, entonces las credenciales son:
 
 1. Usuario: admin
 2. Contrasena: admin
 
-## 8) Comandos utiles
+## 9) Comandos utiles
 
 ### Backend
 
@@ -124,7 +177,7 @@ npm run build
 npm run dev -- --host
 ```
 
-## 9) Solucion de problemas
+## 10) Solucion de problemas
 
 ### Error de puerto ocupado (3000 o 5173)
 
@@ -148,7 +201,7 @@ npm run prisma:migrate
 2. Verifica credenciales admin/admin
 3. Limpia localStorage del navegador y vuelve a iniciar sesion
 
-## 10) Flujo rapido recomendado
+## 11) Flujo rapido recomendado
 
 Si quieres levantar todo rapido en el orden correcto:
 
