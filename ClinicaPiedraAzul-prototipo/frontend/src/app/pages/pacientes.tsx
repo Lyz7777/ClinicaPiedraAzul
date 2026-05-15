@@ -12,6 +12,31 @@ function Pacientes() {
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [email, setEmail] = useState("");
   const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [errores, setErrores] = useState<Record<string, string>>({});
+
+  const limpiarError = (campo: string) => {
+    setErrores((actuales) => {
+      if (!actuales[campo]) {
+        return actuales;
+      }
+
+      const siguientes = { ...actuales };
+      delete siguientes[campo];
+      return siguientes;
+    });
+  };
+
+  const validarFormulario = () => {
+    const siguientesErrores: Record<string, string> = {};
+
+    if (!nombres.trim()) siguientesErrores.nombres = "El nombre es obligatorio.";
+    if (!apellidos.trim()) siguientesErrores.apellidos = "El apellido es obligatorio.";
+    if (!documento.trim()) siguientesErrores.documento = "El documento de identidad es obligatorio.";
+    if (!celular.trim()) siguientesErrores.celular = "El celular es obligatorio.";
+
+    setErrores(siguientesErrores);
+    return Object.keys(siguientesErrores).length === 0;
+  };
 
   const cargar = async () => {
     const data = await getPacientes();
@@ -21,14 +46,18 @@ function Pacientes() {
   useEffect(() => { cargar(); }, []);
 
   const guardar = async () => {
+    if (!validarFormulario()) {
+      return;
+    }
+
     const pacienteData = {
-      nombres,
-      apellidos,
-      documento,
-      celular,
+      nombres: nombres.trim(),
+      apellidos: apellidos.trim(),
+      documento: documento.trim(),
+      celular: celular.trim(),
       genero,
       fechaNacimiento: fechaNacimiento || null,
-      email: email || null
+      email: email.trim() || null
     };
 
     if (editandoId) {
@@ -46,6 +75,7 @@ function Pacientes() {
     setGenero("Otro");
     setFechaNacimiento("");
     setEmail("");
+    setErrores({});
     cargar();
   };
 
@@ -80,16 +110,28 @@ function Pacientes() {
             <input
               placeholder="Nombres"
               value={nombres}
-              onChange={(e) => setNombres(e.target.value)}
+              onChange={(e) => {
+                setNombres(e.target.value);
+                limpiarError("nombres");
+              }}
+              className={errores.nombres ? "input-error" : ""}
+              aria-invalid={Boolean(errores.nombres)}
             />
+            {errores.nombres && <small className="error-message">{errores.nombres}</small>}
           </div>
           <div className="form-group">
             <label>Apellidos *</label>
             <input
               placeholder="Apellidos"
               value={apellidos}
-              onChange={(e) => setApellidos(e.target.value)}
+              onChange={(e) => {
+                setApellidos(e.target.value);
+                limpiarError("apellidos");
+              }}
+              className={errores.apellidos ? "input-error" : ""}
+              aria-invalid={Boolean(errores.apellidos)}
             />
+            {errores.apellidos && <small className="error-message">{errores.apellidos}</small>}
           </div>
         </div>
 
@@ -99,16 +141,28 @@ function Pacientes() {
             <input
               placeholder="Documento"
               value={documento}
-              onChange={(e) => setDocumento(e.target.value)}
+              onChange={(e) => {
+                setDocumento(e.target.value);
+                limpiarError("documento");
+              }}
+              className={errores.documento ? "input-error" : ""}
+              aria-invalid={Boolean(errores.documento)}
             />
+            {errores.documento && <small className="error-message">{errores.documento}</small>}
           </div>
           <div className="form-group">
             <label>Celular *</label>
             <input
               placeholder="Celular"
               value={celular}
-              onChange={(e) => setCelular(e.target.value)}
+              onChange={(e) => {
+                setCelular(e.target.value);
+                limpiarError("celular");
+              }}
+              className={errores.celular ? "input-error" : ""}
+              aria-invalid={Boolean(errores.celular)}
             />
+            {errores.celular && <small className="error-message">{errores.celular}</small>}
           </div>
         </div>
 
@@ -144,7 +198,13 @@ function Pacientes() {
           />
         </div>
 
-        <button className="btn btn-primary" onClick={guardar}>
+        {(errores.nombres || errores.apellidos || errores.documento || errores.celular) && (
+          <div className="error-message form-error-summary" style={{ marginBottom: 16 }}>
+            Complete los campos obligatorios marcados con * antes de guardar.
+          </div>
+        )}
+
+        <button className="btn btn-primary" onClick={guardar} type="button">
           {editandoId ? "Actualizar" : "Guardar"}
         </button>
       </div>

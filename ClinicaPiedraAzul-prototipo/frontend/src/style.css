@@ -512,6 +512,13 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.14);
 }
 
+input.input-error,
+select.input-error,
+textarea.input-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
 input::placeholder {
   color: var(--gray-300);
 }
@@ -521,6 +528,19 @@ small {
   color: var(--gray-500);
   margin-top: 6px;
   display: block;
+}
+
+.error-message {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.form-error-summary {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
 }
 
 /* ========== BOTONES REFINADOS ========== */

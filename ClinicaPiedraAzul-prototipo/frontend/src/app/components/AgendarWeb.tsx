@@ -41,6 +41,7 @@ function AgendarWeb() {
   });
   const [pacienteExistente, setPacienteExistente] = useState<any>(null);
   const [buscandoPaciente, setBuscandoPaciente] = useState(false);
+  const [errores, setErrores] = useState<Record<string, string>>({});
 
   // Cargar médicos desde el backend
   useEffect(() => {
@@ -55,6 +56,68 @@ function AgendarWeb() {
   const medicosFiltrados = especialidad 
     ? medicos.filter(m => m.especialidad === especialidad)
     : [];
+
+  const limpiarError = (campo: string) => {
+    setErrores((actuales) => {
+      if (!actuales[campo]) {
+        return actuales;
+      }
+
+      const siguientes = { ...actuales };
+      delete siguientes[campo];
+      return siguientes;
+    });
+  };
+
+  const validarPaso = (pasoActual: number) => {
+    const siguientesErrores: Record<string, string> = {};
+
+    if (pasoActual === 1 && !especialidad) {
+      siguientesErrores.especialidad = "Seleccione una especialidad.";
+    }
+
+    if (pasoActual === 2 && !medicoId) {
+      siguientesErrores.medicoId = "Seleccione un especialista.";
+    }
+
+    if (pasoActual === 3 && !fecha) {
+      siguientesErrores.fecha = "Seleccione una fecha.";
+    }
+
+    if (pasoActual === 4 && !hora) {
+      siguientesErrores.hora = "Seleccione una hora.";
+    }
+
+    setErrores((actuales) => ({ ...actuales, ...siguientesErrores }));
+    return Object.keys(siguientesErrores).length === 0;
+  };
+
+  const validarPaciente = () => {
+    const siguientesErrores: Record<string, string> = {};
+    const documento = paciente.documento.trim();
+    const nombres = paciente.nombres.trim();
+    const apellidos = paciente.apellidos.trim();
+    const celular = paciente.celular.trim();
+
+    if (!documento) {
+      siguientesErrores.documento = "El documento de identidad es obligatorio.";
+    }
+
+    if (!nombres) {
+      siguientesErrores.nombres = "El nombre es obligatorio.";
+    }
+
+    if (!apellidos) {
+      siguientesErrores.apellidos = "El apellido es obligatorio.";
+    }
+
+    if (!celular) {
+      siguientesErrores.celular = "El celular es obligatorio.";
+    }
+
+    setErrores((actuales) => ({ ...actuales, ...siguientesErrores }));
+    return Object.keys(siguientesErrores).length === 0;
+  };
 
   // Cargar horas disponibles cuando cambia médico o fecha
   useEffect(() => {
@@ -72,7 +135,10 @@ function AgendarWeb() {
   }, [medicoId, fecha]);
 
   const buscarPaciente = async (documento: string) => {
-    if (!documento || documento.length < 5) return;
+    if (!documento || documento.length < 5) {
+      setPacienteExistente(null);
+      return;
+    }
     
     setBuscandoPaciente(true);
     const pacienteEncontrado = await buscarPacientePorDocumento(documento);
@@ -94,25 +160,11 @@ function AgendarWeb() {
     setBuscandoPaciente(false);
   };
 
-  const registrarNuevoPaciente = async () => {
-    if (!paciente.documento || !paciente.nombres || !paciente.apellidos || !paciente.celular) {
-      alert("Por favor complete los campos obligatorios");
-      return false;
-    }
-
-    const nuevoPaciente = await crearPaciente(paciente);
-    setPacienteExistente(nuevoPaciente);
-    return nuevoPaciente.id;
-  };
-
   const handleConfirmar = async () => {
-    if (!especialidad || !medicoId || !fecha || !hora) {
-      alert("Por favor complete todos los datos de la cita");
-      return;
-    }
+    const citaValida = validarPaso(1) && validarPaso(2) && validarPaso(3) && validarPaso(4);
+    const pacienteValido = validarPaciente();
 
-    if (!paciente.documento || !paciente.nombres || !paciente.apellidos || !paciente.celular) {
-      alert("Por favor complete los datos personales");
+    if (!citaValida || !pacienteValido) {
       return;
     }
 
@@ -121,12 +173,21 @@ function AgendarWeb() {
     try {
       let pacienteId;
 
-      const existente = await buscarPacientePorDocumento(paciente.documento);
+      const documentoLimpio = paciente.documento.trim();
+      const existente = await buscarPacientePorDocumento(documentoLimpio);
       
       if (existente) {
         pacienteId = existente.id;
       } else {
-        const nuevo = await crearPaciente(paciente);
+        const nuevo = await crearPaciente({
+          ...paciente,
+          documento: documentoLimpio,
+          nombres: paciente.nombres.trim(),
+          apellidos: paciente.apellidos.trim(),
+          celular: paciente.celular.trim(),
+          email: paciente.email.trim() || undefined,
+          fechaNacimiento: paciente.fechaNacimiento || undefined,
+        });
         pacienteId = nuevo.id;
       }
 
@@ -157,6 +218,7 @@ function AgendarWeb() {
         fechaNacimiento: ""
       });
       setPacienteExistente(null);
+      setErrores({});
 
     } catch (error) {
       console.error("Error al agendar cita:", error);
@@ -167,20 +229,7 @@ function AgendarWeb() {
   };
 
   const avanzarPaso = () => {
-    if (paso === 1 && !especialidad) {
-      alert("Por favor seleccione una especialidad");
-      return;
-    }
-    if (paso === 2 && !medicoId) {
-      alert("Por favor seleccione un especialista");
-      return;
-    }
-    if (paso === 3 && !fecha) {
-      alert("Por favor seleccione una fecha");
-      return;
-    }
-    if (paso === 4 && !hora) {
-      alert("Por favor seleccione una hora");
+    if (!validarPaso(paso)) {
       return;
     }
     setPaso(paso + 1);
@@ -211,12 +260,17 @@ function AgendarWeb() {
       {paso === 1 && (
         <div className="card-custom">
           <h4>Seleccione una especialidad</h4>
+          {errores.especialidad && <div className="error-message form-error-summary">{errores.especialidad}</div>}
           <div className="options-grid">
             {ESPECIALIDADES.map(esp => (
               <button
                 key={esp}
                 className={`option-card ${especialidad === esp ? "selected" : ""}`}
-                onClick={() => setEspecialidad(esp)}
+                type="button"
+                onClick={() => {
+                  setEspecialidad(esp);
+                  limpiarError("especialidad");
+                }}
               >
                 <strong>{esp}</strong>
               </button>
@@ -228,15 +282,18 @@ function AgendarWeb() {
       {paso === 2 && (
         <div className="card-custom">
           <h4>Seleccione un especialista</h4>
+          {errores.medicoId && <div className="error-message form-error-summary">{errores.medicoId}</div>}
           {medicosFiltrados.length > 0 ? (
             <div className="options-grid">
               {medicosFiltrados.map((doc: any) => (
                 <button
                   key={doc.id}
                   className={`option-card ${medicoId === doc.id ? "selected" : ""}`}
+                  type="button"
                   onClick={() => {
                     setMedicoId(doc.id);
                     setMedicoNombre(doc.nombre);
+                    limpiarError("medicoId");
                   }}
                 >
                   <strong>{doc.nombre}</strong>
@@ -256,10 +313,14 @@ function AgendarWeb() {
       {paso === 3 && (
         <div className="card-custom">
           <h4>Seleccione una fecha</h4>
+          {errores.fecha && <div className="error-message form-error-summary">{errores.fecha}</div>}
           <input
             type="date"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
+            onChange={(e) => {
+              setFecha(e.target.value);
+              limpiarError("fecha");
+            }}
             min={new Date().toISOString().split('T')[0]}
             className="date-input"
           />
@@ -270,6 +331,7 @@ function AgendarWeb() {
       {paso === 4 && (
         <div className="card-custom">
           <h4>Seleccione una hora</h4>
+          {errores.hora && <div className="error-message form-error-summary">{errores.hora}</div>}
           {cargandoHoras ? (
             <p className="text-center">Cargando horarios disponibles...</p>
           ) : horasDisponibles.length > 0 ? (
@@ -278,7 +340,11 @@ function AgendarWeb() {
                 <button
                   key={h}
                   className={`hour-btn ${hora === h ? "selected" : ""}`}
-                  onClick={() => setHora(h)}
+                  type="button"
+                  onClick={() => {
+                    setHora(h);
+                    limpiarError("hora");
+                  }}
                 >
                   {h}
                 </button>
@@ -296,6 +362,11 @@ function AgendarWeb() {
       {paso === 5 && (
         <div className="card-custom">
           <h4>Datos personales</h4>
+          {(errores.documento || errores.nombres || errores.apellidos || errores.celular) && (
+            <div className="error-message form-error-summary">
+              Complete los campos obligatorios marcados con * antes de confirmar la cita.
+            </div>
+          )}
           
           <div className="form-group">
             <label>Documento de identidad *</label>
@@ -305,9 +376,13 @@ function AgendarWeb() {
               value={paciente.documento}
               onChange={(e) => {
                 setPaciente({...paciente, documento: e.target.value});
+                limpiarError("documento");
                 buscarPaciente(e.target.value);
               }}
+              className={errores.documento ? "input-error" : ""}
+              aria-invalid={Boolean(errores.documento)}
             />
+            {errores.documento && <small className="error-message">{errores.documento}</small>}
           </div>
 
           {buscandoPaciente && <p className="text-center">Buscando paciente...</p>}
@@ -326,9 +401,15 @@ function AgendarWeb() {
                 type="text"
                 placeholder="Nombres"
                 value={paciente.nombres}
-                onChange={(e) => setPaciente({...paciente, nombres: e.target.value})}
+                onChange={(e) => {
+                  setPaciente({...paciente, nombres: e.target.value});
+                  limpiarError("nombres");
+                }}
                 disabled={pacienteExistente !== null}
+                className={errores.nombres ? "input-error" : ""}
+                aria-invalid={Boolean(errores.nombres)}
               />
+              {errores.nombres && <small className="error-message">{errores.nombres}</small>}
             </div>
             <div className="form-group">
               <label>Apellidos *</label>
@@ -336,9 +417,15 @@ function AgendarWeb() {
                 type="text"
                 placeholder="Apellidos"
                 value={paciente.apellidos}
-                onChange={(e) => setPaciente({...paciente, apellidos: e.target.value})}
+                onChange={(e) => {
+                  setPaciente({...paciente, apellidos: e.target.value});
+                  limpiarError("apellidos");
+                }}
                 disabled={pacienteExistente !== null}
+                className={errores.apellidos ? "input-error" : ""}
+                aria-invalid={Boolean(errores.apellidos)}
               />
+              {errores.apellidos && <small className="error-message">{errores.apellidos}</small>}
             </div>
           </div>
 
@@ -349,9 +436,15 @@ function AgendarWeb() {
                 type="tel"
                 placeholder="Celular"
                 value={paciente.celular}
-                onChange={(e) => setPaciente({...paciente, celular: e.target.value})}
+                onChange={(e) => {
+                  setPaciente({...paciente, celular: e.target.value});
+                  limpiarError("celular");
+                }}
                 disabled={pacienteExistente !== null}
+                className={errores.celular ? "input-error" : ""}
+                aria-invalid={Boolean(errores.celular)}
               />
+              {errores.celular && <small className="error-message">{errores.celular}</small>}
             </div>
             <div className="form-group">
               <label>Género</label>
@@ -409,13 +502,7 @@ function AgendarWeb() {
           <button 
             className="btn btn-primary" 
             onClick={avanzarPaso}
-            disabled={
-              (paso === 1 && !especialidad) || 
-              (paso === 2 && !medicoId) || 
-              (paso === 3 && !fecha) || 
-              (paso === 4 && !hora) ||
-              cargando
-            }
+            disabled={cargando}
           >
             Siguiente →
           </button>
@@ -424,13 +511,7 @@ function AgendarWeb() {
           <button 
             className="btn btn-success"
             onClick={handleConfirmar}
-            disabled={
-              !paciente.documento || 
-              !paciente.nombres || 
-              !paciente.apellidos || 
-              !paciente.celular ||
-              cargando
-            }
+            disabled={cargando}
           >
             {cargando ? "Procesando..." : "Confirmar Cita"}
           </button>
