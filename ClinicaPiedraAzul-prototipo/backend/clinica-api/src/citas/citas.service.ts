@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -51,17 +51,51 @@ export class CitasService {
     }
   }
 
-  async findAll(page: number = 1, limit: number = 10, order: 'asc' | 'desc' = 'asc') {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+    order: 'asc' | 'desc' = 'asc',
+    medicoId?: number,
+    fecha?: string,
+  ) {
     const skip = (page - 1) * limit;
+    const where: { medicoId?: number; fecha?: string } = {};
+    if (typeof medicoId === 'number' && !isNaN(medicoId)) where.medicoId = medicoId;
+    if (fecha) where.fecha = fecha;
     const [citas, total] = await Promise.all([
       this.prisma.cita.findMany({
+        where,
         skip,
         take: limit,
         orderBy: [{ fecha: order }, { hora: order }],
         include: { paciente: true, medico: { include: { configuracion: true } } },
       }),
-      this.prisma.cita.count(),
+      this.prisma.cita.count({ where }),
     ]);
+    return { data: citas, total, page, totalPages: Math.ceil(total / limit), limit };
+  }
+
+  async findByMedicoAuth0Id(auth0Id: string, page: number, limit: number, fecha?: string) {
+    const medico = await this.prisma.medico.findUnique({ where: { auth0Id } });
+    if (!medico) {
+      throw new NotFoundException('Médico no encontrado para este usuario');
+    }
+
+    const skip = (page - 1) * limit;
+    const where: { medicoId: number; fecha?: string } = { medicoId: medico.id };
+    if (fecha) where.fecha = fecha;
+
+    const [citas, total] = await Promise.all([
+      this.prisma.cita.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ fecha: 'asc' }, { hora: 'asc' }],
+        include: { paciente: true, medico: { include: { configuracion: true } } },
+      }),
+      this.prisma.cita.count({ where }),
+    ]);
+
     return { data: citas, total, page, totalPages: Math.ceil(total / limit), limit };
   }
 
@@ -222,8 +256,25 @@ export class CitasService {
   }
 
   // ========== NUEVOS MÉTODOS (reagendamiento e historial) ==========
-  async reagendarCita(id: number, nuevaFecha: string, nuevaHora: string, usuario: string) {
+  async reagendarCita(
+    id: number,
+    nuevaFecha: string,
+    nuevaHora: string,
+    usuario: string,
+    userRole?: string,
+    userAuth0Id?: string,
+  ) {
     const citaOriginal = await this.findOne(id);
+
+    if (userRole === 'medico' && userAuth0Id) {
+      const medico = await this.prisma.medico.findUnique({ where: { auth0Id: userAuth0Id } });
+      if (!medico) {
+        throw new NotFoundException('Médico no encontrado para este usuario');
+      }
+      if (citaOriginal.medicoId !== medico.id) {
+        throw new ForbiddenException('No tienes permiso para reagendar esta cita');
+      }
+    }
 
     const medico = await this.prisma.medico.findUnique({
       where: { id: citaOriginal.medicoId },

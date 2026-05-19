@@ -16,11 +16,14 @@ export class CitasController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('order') order?: 'asc' | 'desc',
+    @Query('medicoId') medicoId?: string,
+    @Query('fecha') fecha?: string,
   ) {
     const pageNumber = page ? parseInt(page, 10) : 1;
     const limitNumber = limit ? parseInt(limit, 10) : 10;
     const orderBy = order === 'desc' ? 'desc' : 'asc';
-    return this.service.findAll(pageNumber, limitNumber, orderBy);
+    const medicoIdNumber = medicoId ? Number(medicoId) : undefined;
+    return this.service.findAll(pageNumber, limitNumber, orderBy, medicoIdNumber, fecha);
   }
 
   @Get('horas-disponibles')
@@ -30,7 +33,7 @@ export class CitasController {
   }
 
   @Get('exportar-csv')
-  @Roles('admin', 'agendador')
+  @Roles('admin', 'agendador', 'medico')
   async exportarCsv(@Query('medicoId') medicoId: string, @Query('fecha') fecha: string, @Res() res: Response) {
     try {
       const medicoIdNumber = medicoId ? Number(medicoId) : undefined;
@@ -52,6 +55,21 @@ export class CitasController {
         res.status(500).json({ statusCode: 500, message: mensaje });
       }
     }
+  }
+
+  @Get('mis-citas')
+  @Roles('medico')
+  async findMisCitas(
+    @Req() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('fecha') fecha?: string,
+  ) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 10;
+    const auth0Id = req.user?.id;
+    if (!auth0Id) throw new BadRequestException('Usuario no autenticado');
+    return this.service.findByMedicoAuth0Id(auth0Id, pageNumber, limitNumber, fecha);
   }
 
   @Get(':id')
@@ -85,7 +103,7 @@ export class CitasController {
   }
 
   @Put(':id/reagendar')
-  @Roles('admin', 'agendador')
+  @Roles('admin', 'agendador', 'medico')
   async reagendarCita(
     @Param('id') id: string,
     @Body() body: { fecha: string; hora: string },
@@ -94,11 +112,11 @@ export class CitasController {
     const idNumber = Number(id);
     if (isNaN(idNumber)) throw new BadRequestException('El id debe ser un número');
     const usuario = req.user?.username || 'sistema';
-    return this.service.reagendarCita(idNumber, body.fecha, body.hora, usuario);
+    return this.service.reagendarCita(idNumber, body.fecha, body.hora, usuario, req.user?.role, req.user?.id);
   }
 
   @Get(':id/historial')
-  @Roles('admin', 'agendador')
+  @Roles('admin', 'agendador', 'medico')
   async getHistorial(@Param('id') id: string) {
     const idNumber = Number(id);
     if (isNaN(idNumber)) throw new BadRequestException('El id debe ser un número');

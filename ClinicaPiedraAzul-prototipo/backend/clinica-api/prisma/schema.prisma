@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Usuario {
@@ -17,6 +17,7 @@ model Medico {
   id            Int                  @id @default(autoincrement())
   nombre        String
   especialidad  String
+  auth0Id       String?              @unique
   citas         Cita[]
   configuracion ConfiguracionMedico?
   createdAt     DateTime             @default(now())

@@ -35,6 +35,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ? 'admin'
       : roles.includes('scheduler') || roles.includes('agendador') || roles.includes('sheduler')
       ? 'agendador'
+      : roles.includes('medico') || roles.includes('terapista')
+      ? 'medico'
       : roles.includes('patient') || roles.includes('paciente')
       ? 'paciente'
       : payload?.role;

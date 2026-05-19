@@ -16,8 +16,15 @@ function Citas() {
   // Paginación local
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalResultados, setTotalResultados] = useState(0);
   const [orden, setOrden] = useState<"asc" | "desc">("asc");
   const limit = 10;
+
+  // ========== ESTADOS PARA FILTROS ==========
+  const [filtroMedicoId, setFiltroMedicoId] = useState("");
+  const [filtroFecha, setFiltroFecha] = useState("");
+  const [appliedMedicoId, setAppliedMedicoId] = useState("");
+  const [appliedFecha, setAppliedFecha] = useState("");
 
   // ========== ESTADOS PARA CREAR CITA ==========
   const [fecha, setFecha] = useState("");
@@ -57,48 +64,58 @@ function Citas() {
   const [exportFecha, setExportFecha] = useState("");
 
   // ========== CARGAR DATOS INICIALES ==========
+  const normalizeList = (data: any) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  };
+
+  const cargarCitas = async (
+    pageToLoad: number = page,
+    orderToLoad: "asc" | "desc" = orden,
+    medicoIdToLoad: string = appliedMedicoId,
+    fechaToLoad: string = appliedFecha,
+  ) => {
+    const medicoIdNumber = medicoIdToLoad ? Number(medicoIdToLoad) : undefined;
+    const data = await getCitas({
+      medicoId: medicoIdNumber,
+      fecha: fechaToLoad || undefined,
+      page: pageToLoad,
+      limit,
+      order: orderToLoad,
+    });
+    const lista = normalizeList(data);
+    const total = typeof data?.total === "number" ? data.total : lista.length;
+    const totalPag = typeof data?.totalPages === "number"
+      ? data.totalPages
+      : Math.ceil(total / limit) || 1;
+    setCitas(lista);
+    setTotalResultados(total);
+    setTotalPages(totalPag);
+  };
+
   const cargarTodo = async () => {
-    const [citasData, pacientesData, medicosData] = await Promise.all([
-      getCitas(),
+    const [pacientesData, medicosData] = await Promise.all([
       getPacientes(),
       getMedicos(),
     ]);
-    const normalizeList = (data: any) => {
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.data)) return data.data;
-      return [];
-    };
-    setCitas(normalizeList(citasData));
     setPacientes(normalizeList(pacientesData));
     setMedicos(normalizeList(medicosData));
+    await cargarCitas(1);
   };
 
   useEffect(() => {
     cargarTodo();
   }, []);
 
+  useEffect(() => {
+    cargarCitas(page, orden);
+  }, [page, orden, appliedMedicoId, appliedFecha]);
+
   // ========== PAGINACIÓN Y ORDEN LOCAL ==========
   const getCitasPaginadas = () => {
-    if (!Array.isArray(citas)) {
-      return [];
-    }
-    let citasOrdenadas = [...citas];
-    citasOrdenadas.sort((a, b) => {
-      const compareFecha = orden === "asc"
-        ? a.fecha.localeCompare(b.fecha)
-        : b.fecha.localeCompare(a.fecha);
-      if (compareFecha !== 0) return compareFecha;
-      return orden === "asc"
-        ? a.hora.localeCompare(b.hora)
-        : b.hora.localeCompare(a.hora);
-    });
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginadas = citasOrdenadas.slice(start, end);
-    const total = citasOrdenadas.length;
-    const totalPag = Math.ceil(total / limit);
-    if (totalPages !== totalPag) setTotalPages(totalPag);
-    return paginadas;
+    if (!Array.isArray(citas)) return [];
+    return citas;
   };
 
   const cambiarPagina = (nueva: number) => setPage(nueva);
@@ -231,6 +248,20 @@ function Citas() {
   const medicosUnicos = Array.from(
     new Map(medicos.map((m: any) => [m.id, m])).values(),
   );
+
+  const buscarConFiltros = async () => {
+    setAppliedMedicoId(filtroMedicoId);
+    setAppliedFecha(filtroFecha);
+    setPage(1);
+  };
+
+  const limpiarFiltros = async () => {
+    setFiltroMedicoId("");
+    setFiltroFecha("");
+    setAppliedMedicoId("");
+    setAppliedFecha("");
+    setPage(1);
+  };
 
   // ========== FUNCIONES PARA REAGENDAR ==========
   useEffect(() => {
@@ -371,7 +402,10 @@ function Citas() {
       {mostrandoListado ? (
         <div className="card-custom">
           <div className="result-header">
-            <h4>Listado de Citas</h4>
+            <div>
+              <h4>Listado de Citas</h4>
+              <small>{totalResultados} citas encontradas</small>
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <select
                 value={exportMedicoId}
@@ -398,6 +432,32 @@ function Citas() {
                 Ordenar {orden === "asc" ? "↑" : "↓"}
               </button>
             </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+            <select
+              value={filtroMedicoId}
+              onChange={(e) => setFiltroMedicoId(e.target.value)}
+              className="date-input"
+            >
+              <option value="">Todos los médicos</option>
+              {medicosUnicos.map((m: any) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              className="date-input"
+            />
+            <button className="btn btn-primary" onClick={buscarConFiltros}>
+              Buscar
+            </button>
+            <button className="btn btn-secondary" onClick={limpiarFiltros}>
+              Limpiar
+            </button>
           </div>
           {citasMostrar.length === 0 ? (
             <div className="empty-state"><p>No hay citas</p></div>

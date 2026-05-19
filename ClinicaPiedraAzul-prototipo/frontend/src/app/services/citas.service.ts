@@ -7,16 +7,28 @@ const getHeaders = async (withBody = false) => {
   return withBody ? { "Content-Type": "application/json", ...authHeaders } : { ...authHeaders };
 };
 
-// Obtener todas las citas
-export const getCitas = async () => {
-  const res = await fetch(URL, { headers: await getHeaders() });
+// Obtener citas con filtros opcionales
+export const getCitas = async (params?: {
+  medicoId?: number;
+  fecha?: string;
+  page?: number;
+  limit?: number;
+  order?: "asc" | "desc";
+}) => {
+  const search = new URLSearchParams();
+  if (params?.medicoId) search.set("medicoId", String(params.medicoId));
+  if (params?.fecha) search.set("fecha", params.fecha);
+  if (params?.page) search.set("page", String(params.page));
+  if (params?.limit) search.set("limit", String(params.limit));
+  if (params?.order) search.set("order", params.order);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const res = await fetch(`${URL}${suffix}`, { headers: await getHeaders() });
   return res.json();
 };
 
 // Obtener citas por médico y fecha (Requisito 1)
 export const getCitasByMedicoAndFecha = async (medicoId: number, fecha: string) => {
-  const res = await fetch(`${URL}?medicoId=${medicoId}&fecha=${fecha}`, { headers: await getHeaders() });
-  return res.json();
+  return getCitas({ medicoId, fecha });
 };
 
 // Crear nueva cita (Requisito 2)

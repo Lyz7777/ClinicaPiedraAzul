@@ -18,6 +18,9 @@ const normalizeRole = (role: string): UserRole | null => {
   if (value === "patient" || value === "paciente") {
     return "patient";
   }
+  if (value === "medico" || value === "terapista") {
+    return "medico";
+  }
   return null;
 };
 
@@ -40,6 +43,7 @@ const resolveUserRole = (user: unknown): UserRole | null => {
   const roles = resolveUserRoles(user);
   if (roles.includes("admin")) return "admin";
   if (roles.includes("scheduler")) return "scheduler";
+  if (roles.includes("medico")) return "medico";
   if (roles.includes("patient")) return "patient";
   return null;
 };

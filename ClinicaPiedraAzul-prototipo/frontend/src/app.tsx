@@ -22,6 +22,7 @@ import Sidebar from "./app/components/Sidebar";
 import Header from "./app/components/Header";
 import Footer from "./app/components/Footer";
 import Citas from "./app/pages/citas";
+import MisCitas from "./app/pages/MisCitas";
 import Medicos from "./app/pages/medicos";
 import Pacientes from "./app/pages/pacientes";
 import AgendarWeb from "./app/components/AgendarWeb";
@@ -70,6 +71,8 @@ function App() {
     ? "admin"
     : authRole === "scheduler"
     ? "agendador"
+    : authRole === "medico"
+    ? "medico"
     : authRole === "patient"
     ? "paciente"
     : null;
@@ -79,6 +82,7 @@ function App() {
     if (rolActivo === "paciente") setVista("agendar-web");
     if (rolActivo === "admin") setVista("configuracion");
     if (rolActivo === "agendador") setVista("citas");
+    if (rolActivo === "medico") setVista("mis-citas");
   }, [rolActivo]);
 
   useEffect(() => {
@@ -119,6 +123,8 @@ function App() {
                     ? "Ingresar como Administrador"
                     : role === "scheduler"
                     ? "Ingresar como Agendador"
+                    : role === "medico"
+                    ? "Ingresar como Medico"
                     : "Ingresar como Paciente"}
                 </button>
               ))}
@@ -191,6 +197,8 @@ function App() {
         return <AgendarWeb />;
       case "configuracion":
         return <Medicos rol={rolActivo} modo="configuracion" />;
+      case "mis-citas":
+        return <MisCitas />;
       default:
         return <Citas />;
     }
@@ -216,6 +224,8 @@ function App() {
                   ? "Dashboard Administrador"
                   : rolActivo === "agendador"
                   ? "Dashboard Agendador"
+                  : rolActivo === "medico"
+                  ? "Dashboard Medico"
                   : "Dashboard Paciente"}
               </p>
               <span className="role-banner-subtitle">
@@ -223,6 +233,8 @@ function App() {
                   ? "Gestiona la configuración de horarios y parámetros de agenda"
                   : rolActivo === "agendador"
                   ? "Administra citas y operaciones del día"
+                  : rolActivo === "medico"
+                  ? "Consulta y administra tus propias citas"
                   : "Agenda tu cita de forma rápida y segura"}
               </span>
             </div>

@@ -26,9 +26,15 @@ function Sidebar({ setVista, activeVista, rol }: any) {
     { id: "agendar-web", icon: Globe, label: "Agendar Cita" },
   ];
 
+  const menuItemsMedico = [
+    { id: "mis-citas", icon: CalendarDays, label: "Mis Citas" },
+  ];
+
   const menuItems =
     rol === "paciente"
       ? menuItemsPaciente
+      : rol === "medico"
+      ? menuItemsMedico
       : rol === "admin"
       ? menuItemsAdmin
       : menuItemsAgendador;
@@ -47,6 +53,8 @@ function Sidebar({ setVista, activeVista, rol }: any) {
           <h2>
             {rol === "paciente"
               ? "Portal Paciente"
+              : rol === "medico"
+              ? "Panel Medico"
               : rol === "admin"
               ? "Dashboard Admin"
               : "Dashboard Agendador"}
@@ -54,6 +62,8 @@ function Sidebar({ setVista, activeVista, rol }: any) {
           <p>
             {rol === "paciente"
               ? "Autogestión de citas médicas"
+              : rol === "medico"
+              ? "Seguimiento de tus citas"
               : rol === "admin"
               ? "Configuración y control del sistema"
               : "Gestión y agenda inteligente"}
@@ -88,6 +98,12 @@ function Sidebar({ setVista, activeVista, rol }: any) {
               <li><span className="list-dot" />Selecciona especialidad</li>
               <li><span className="list-dot" />Elige médico y horario</li>
               <li><span className="list-dot" />Confirma tu cita</li>
+            </ul>
+          ) : rol === "medico" ? (
+            <ul>
+              <li><span className="list-dot" />Consulta tu agenda</li>
+              <li><span className="list-dot" />Reagenda cuando sea necesario</li>
+              <li><span className="list-dot" />Revisa historial de cambios</li>
             </ul>
           ) : rol === "admin" ? (
             <ul>
