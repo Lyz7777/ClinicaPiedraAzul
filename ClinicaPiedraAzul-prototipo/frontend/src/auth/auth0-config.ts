@@ -15,5 +15,7 @@ const hasPlaceholder = (value: string | undefined, placeholder: string) => {
 
 export const isAuth0Configured = !(
   hasPlaceholder(import.meta.env.VITE_AUTH0_DOMAIN, "your-tenant.auth0.com") ||
-  hasPlaceholder(import.meta.env.VITE_AUTH0_CLIENT_ID, "your-client-id-here")
+  hasPlaceholder(import.meta.env.VITE_AUTH0_CLIENT_ID, "your-client-id-here") ||
+  !import.meta.env.VITE_AUTH0_AUDIENCE ||
+  hasPlaceholder(import.meta.env.VITE_AUTH0_AUDIENCE, "your-api-identifier")
 );

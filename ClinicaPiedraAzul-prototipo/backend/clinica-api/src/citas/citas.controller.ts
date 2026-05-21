@@ -27,7 +27,7 @@ export class CitasController {
   }
 
   @Get('horas-disponibles')
-  @Roles('admin', 'agendador')
+  @Roles('admin', 'agendador', 'paciente')
   getHorasDisponibles(@Query('medicoId') medicoId: string, @Query('fecha') fecha: string) {
     return this.service.getHorasDisponibles(Number(medicoId), fecha);
   }
@@ -81,7 +81,7 @@ export class CitasController {
   }
 
   @Post()
-  @Roles('admin', 'agendador')
+  @Roles('admin', 'agendador', 'paciente')
   create(@Body() body: any) {
     return this.service.create(body);
   }

@@ -24,7 +24,9 @@ const cardStyle: CSSProperties = {
 };
 
 function AuthCallback() {
-  const { isAuthenticated, isLoading, getUserRole } = useAuth();
+  const { isAuthenticated, isLoading, getUserRole, getUserRoles, logout } = useAuth();
+  const roles = getUserRoles();
+  const hasRoles = roles.length > 0;
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -35,6 +37,8 @@ function AuthCallback() {
     }
   }, [isAuthenticated, isLoading, getUserRole]);
 
+  const missingRoles = isAuth0Configured && isAuthenticated && !isLoading && !hasRoles;
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
@@ -43,11 +47,24 @@ function AuthCallback() {
         </div>
         <h2>Verificando credenciales</h2>
         <p style={{ opacity: 0.75 }}>
-          {isAuth0Configured
-            ? "Estamos preparando tu panel seguro."
-            : "Faltan las variables de Auth0 en .env. Actualiza la configuracion para continuar."}
+          {!isAuth0Configured
+            ? "Faltan variables de Auth0 en .env (incluye audiencia). Actualiza la configuracion para continuar."
+            : missingRoles
+            ? "No encontramos roles en tu token. Revisa que el usuario tenga rol y que el claim https://piedrazul.com/roles este en el token."
+            : "Estamos preparando tu panel seguro."}
         </p>
-        {isAuth0Configured && <div className="loading-spinner" style={{ marginTop: "1.5rem" }} />}
+        {missingRoles && (
+          <button
+            className="login-submit-btn"
+            style={{ marginTop: "1.5rem" }}
+            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+          >
+            Cerrar sesion
+          </button>
+        )}
+        {!missingRoles && isAuth0Configured && (
+          <div className="loading-spinner" style={{ marginTop: "1.5rem" }} />
+        )}
       </div>
     </div>
   );
