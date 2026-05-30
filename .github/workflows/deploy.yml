@@ -1,0 +1,106 @@
+name: CI/CD Pipeline - PiedraAzul
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ========== TEST BACKEND ==========
+  test-backend:
+    name: 🧪 Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/clinica-api
+    
+    steps:
+      - name:  Checkout code
+        uses: actions/checkout@v4
+      
+      - name:  Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./backend/clinica-api/package-lock.json
+      
+      - name:  Install dependencies
+        run: npm ci
+      
+      - name:  Generate Prisma Client
+        run: npx prisma generate
+      
+      - name:  Run unit tests
+        run: npm run test
+        continue-on-error: false
+
+  # ========== BUILD FRONTEND ==========
+  build-frontend:
+    name:  Build Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - name:  Checkout code
+        uses: actions/checkout@v4
+      
+      - name:  Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+      
+      - name:  Install dependencies
+        run: npm ci
+      
+      - name:  Build project
+        run: npm run build
+        env:
+          VITE_AUTH0_DOMAIN: ${{ secrets.VITE_AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID: ${{ secrets.VITE_AUTH0_CLIENT_ID }}
+          VITE_AUTH0_AUDIENCE: ${{ secrets.VITE_AUTH0_AUDIENCE }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+  # ========== DEPLOY TO RENDER ==========
+  deploy-render:
+    name:  Deploy to Render
+    needs: [test-backend, build-frontend]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name:  Trigger Render Deployment
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+      
+      - name:  Deployment triggered
+        run: echo "Deployment started on Render. Check Render Dashboard for status."
+
+  # ========== VERIFY DEPLOYMENT ==========
+  verify-deployment:
+    name:  Verify Deployment
+    needs: deploy-render
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+      - name:  Wait for deployment
+        run: sleep 30
+      
+      - name:  Check API health
+        run: |
+          curl -f ${{ secrets.API_URL }}/ || exit 1
+          echo "API is responding"
+      
+      - name:  Check Frontend
+        run: |
+          curl -f ${{ secrets.FRONTEND_URL }} || exit 1
+          echo "Frontend is responding"

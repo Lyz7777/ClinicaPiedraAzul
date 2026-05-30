@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model usuario {
+  id        Int      @id @default(autoincrement())
+  auth0Id   String   @unique
+  email     String   @unique
+  username  String   @unique
+  nombre    String
+  role      String   @default("paciente")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paciente paciente?
+  medico   medico?
+}
+
+model paciente {
+  id              Int      @id @default(autoincrement())
+  auth0Id         String?  @unique
+  documento       String   @unique
+  nombres         String
+  apellidos       String
+  celular         String
+  genero          String
+  fechaNacimiento String?
+  email           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  usuarioId Int?      @unique
+  usuario   usuario?  @relation(fields: [usuarioId], references: [id])
+  citas     cita[]
+}
+
+model medico {
+  id              Int      @id @default(autoincrement())
+  nombre          String
+  especialidad    String
+  auth0Id         String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  usuarioId     Int?                  @unique
+  usuario       usuario?              @relation(fields: [usuarioId], references: [id])
+  configuracion configuracionMedico?
+  citas         cita[]
+}
+
+model configuracionMedico {
+  id               Int    @id @default(autoincrement())
+  medicoId         Int    @unique
+  medico           medico @relation(fields: [medicoId], references: [id])
+  diasAtencion     String
+  horaInicio       String
+  horaFin          String
+  intervaloMinutos Int    @default(30)
+}
+
+model configuracionGlobal {
+  id             Int  @id @default(autoincrement())
+  ventanaSemanas Int  @default(4)
+}
+
+model cita {
+  id                 Int      @id @default(autoincrement())
+  fecha              String
+  hora               String
+  pacienteId         Int
+  paciente           paciente @relation(fields: [pacienteId], references: [id])
+  medicoId           Int
+  medico             medico   @relation(fields: [medicoId], references: [id])
+  descripcion        String?
+  estado             String   @default("AGENDADA")
+  codigoVerificacion String?  @unique
+  recordatorioEnviado   Boolean  @default(false)
+  recordatorioEnviadoEn DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  historial historialCita[]
+}
+
+model historialCita {
+  id            Int      @id @default(autoincrement())
+  citaId        Int
+  cita          cita     @relation(fields: [citaId], references: [id])
+  campo         String
+  valorAnterior String
+  valorNuevo    String
+  modificadoPor String
+  createdAt     DateTime @default(now())
+}
