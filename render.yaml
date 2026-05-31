@@ -3,8 +3,8 @@ services:
     name: clinica-api
     runtime: node
     rootDir: backend/clinica-api
-    buildCommand: npm install && npm run build && npx prisma db push --skip-generate
-    startCommand: npm run start:prod
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: node dist/main.js
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -16,11 +16,6 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
-databases:
-  - name: clinica-db
-    plan: free
-    databaseName: clinica
-    ipAllowList: []
 
   - type: web
     name: clinica-frontend
@@ -49,3 +44,10 @@ databases:
         source: /*
         destination: /index.html
 
+databases:
+  - name: clinica-db
+    plan: free
+    databaseName: clinica
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Allow all
