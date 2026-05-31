@@ -3,7 +3,7 @@ services:
     name: clinica-api
     runtime: node
     rootDir: backend/clinica-api
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build && npm prune --omit=dev
+    buildCommand: npm install && npm run build && npx prisma db push --skip-generate
     startCommand: npm run start:prod
     envVars:
       - key: DATABASE_URL
