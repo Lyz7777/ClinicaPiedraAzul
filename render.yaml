@@ -17,8 +17,9 @@ services:
       - key: NODE_ENV
         value: production
 
-  - type: static
+  - type: web
     name: clinica-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -27,7 +28,7 @@ services:
         fromService:
           name: clinica-api
           type: web
-          property: url
+          property: hostport
       - key: VITE_AUTH0_DOMAIN
         sync: false
       - key: VITE_AUTH0_CLIENT_ID
