@@ -7,13 +7,20 @@ services:
     startCommand: npm run start:prod
     envVars:
       - key: DATABASE_URL
-        value: file:./dev.db
+        fromDatabase:
+          name: clinica-db
+          property: connectionString
       - key: AUTH0_DOMAIN
         sync: false
       - key: AUTH0_AUDIENCE
         sync: false
       - key: NODE_ENV
         value: production
+databases:
+  - name: clinica-db
+    plan: free
+    databaseName: clinica
+    ipAllowList: []
 
   - type: web
     name: clinica-frontend
