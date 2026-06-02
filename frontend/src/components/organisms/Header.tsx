@@ -13,6 +13,7 @@ function Header() {
     : role === "paciente" ? "Paciente" : "";
   const displayName = user?.name || user?.email || "Usuario";
   const email = user?.email || "";
+  const showEmail = Boolean(user?.name && email && email !== user?.name);
 
   return (
     <header className="header">
@@ -37,7 +38,7 @@ function Header() {
         <div className="user-info">
           <span className="user-greeting">Bienvenido</span>
           <span className="user-name">{displayName}</span>
-          {email && <span className="user-greeting">{email}</span>}
+          {showEmail && <span className="user-greeting">{email}</span>}
           {roleLabel && <span className="user-greeting">{roleLabel}</span>}
         </div>
         <button
