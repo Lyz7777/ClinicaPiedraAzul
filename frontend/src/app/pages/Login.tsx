@@ -19,7 +19,16 @@ function Login() {
             <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 4 }}>
               Serás redirigido al portal seguro de autenticación
             </p>
-            <button className="login-submit-btn" onClick={() => loginWithRedirect()}>
+            <button
+              className="login-submit-btn"
+              onClick={() =>
+                loginWithRedirect({
+                  authorizationParams: {
+                    redirect_uri: window.location.origin,
+                  },
+                })
+              }
+            >
               Iniciar sesión con Auth0
             </button>
             {!isAuth0Configured && (
