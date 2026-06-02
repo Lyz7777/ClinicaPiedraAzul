@@ -12,8 +12,7 @@ function Header() {
     : role === "medico" ? "Médico"
     : role === "paciente" ? "Paciente" : "";
   const displayName = user?.name || user?.email || "Usuario";
-  const email = user?.email || "";
-  const showEmail = Boolean(user?.name && email && email !== user?.name);
+  const greetingTarget = roleLabel || displayName;
 
   return (
     <header className="header">
@@ -36,10 +35,7 @@ function Header() {
         </div>
         <div className="user-avatar"><UserRound size={18} /></div>
         <div className="user-info">
-          <span className="user-greeting">Bienvenido</span>
-          <span className="user-name">{displayName}</span>
-          {showEmail && <span className="user-greeting">{email}</span>}
-          {roleLabel && <span className="user-greeting">{roleLabel}</span>}
+          <span className="user-greeting-main">Bienvenido {greetingTarget}</span>
         </div>
         <button
           className="logout-btn"
