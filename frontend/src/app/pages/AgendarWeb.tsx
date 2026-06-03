@@ -225,7 +225,6 @@ function AgendarWeb() {
     </>
   );
 
-  const fechaHoy = new Date().toISOString().split("T")[0];
   const fechaMax = (() => { const d = new Date(); d.setDate(d.getDate() + 28); return d.toISOString().split("T")[0]; })();
 
   return (
@@ -286,7 +285,7 @@ function AgendarWeb() {
         <div className="card card-elevated">
           <div className="card-title">Selecciona la fecha</div>
           <p><strong>{medicoNombre}</strong></p>
-          <input type="date" value={fecha} min={fechaHoy} max={fechaMax} onChange={e => { setFecha(e.target.value); setHora(""); }} className="input-field" style={{ maxWidth:240 }} />
+          <input type="date" value={fecha} min={new Date().toISOString().split("T")[0]} max={fechaMax} onChange={e => { setFecha(e.target.value); setHora(""); }} className="input-field" style={{ maxWidth:240 }} />
           <small>Las citas se pueden agendar con hasta 4 semanas de anticipación</small>
         </div>
       )}
@@ -312,27 +311,22 @@ function AgendarWeb() {
           <div className="card card-elevated">
             <div className="card-title">Tus datos personales</div>
             <div className="form-group">
-              <label className="input-label">Documento de identidad <span className="input-required">*</span></label>
-              <input className="input-field" placeholder="Ej: CC, TI, Pasaporte" value={paciente.documento} onChange={e => { const v = e.target.value; setPaciente(p => ({ ...p, documento: v })); if (v.length >= 4) buscarPaciente(v); }} />
+              <input className="input-field" placeholder="Documento de identidad *" value={paciente.documento} onChange={e => { const v = e.target.value; setPaciente(p => ({ ...p, documento: v })); if (v.length >= 4) buscarPaciente(v); }} />
               {pacienteExistente && <div className="search-found">Paciente encontrado</div>}
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="input-label">Nombres <span className="input-required">*</span></label>
-                <input className="input-field" placeholder="Nombres" value={paciente.nombres} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, nombres: e.target.value }))} />
+                <input className="input-field" placeholder="Nombres *" value={paciente.nombres} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, nombres: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="input-label">Apellidos <span className="input-required">*</span></label>
-                <input className="input-field" placeholder="Apellidos" value={paciente.apellidos} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, apellidos: e.target.value }))} />
+                <input className="input-field" placeholder="Apellidos *" value={paciente.apellidos} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, apellidos: e.target.value }))} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="input-label">Celular <span className="input-required">*</span></label>
-                <input className="input-field" placeholder="Celular" value={paciente.celular} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, celular: e.target.value.replace(/\D/g,"") }))} />
+                <input className="input-field" placeholder="Celular *" value={paciente.celular} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, celular: e.target.value.replace(/\D/g,"") }))} />
               </div>
               <div className="form-group">
-                <label className="input-label">Género <span className="input-required">*</span></label>
                 <select className="input-field" value={paciente.genero} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, genero: e.target.value as any }))}>
                   <option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="Otro">Otro</option>
                 </select>
@@ -340,11 +334,9 @@ function AgendarWeb() {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="input-label">Fecha de nacimiento</label>
-                <input type="date" className="input-field" value={paciente.fechaNacimiento} min="1900-01-01" max={fechaHoy} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
+                <input type="date" className="input-field" value={paciente.fechaNacimiento} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
               </div>
               <div className="form-group">
-                <label className="input-label">Correo electrónico</label>
                 <input type="email" className="input-field" placeholder="Correo electrónico" value={paciente.email} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))} />
               </div>
             </div>
