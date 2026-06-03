@@ -225,6 +225,7 @@ function AgendarWeb() {
     </>
   );
 
+  const fechaHoy = new Date().toISOString().split("T")[0];
   const fechaMax = (() => { const d = new Date(); d.setDate(d.getDate() + 28); return d.toISOString().split("T")[0]; })();
 
   return (
@@ -285,7 +286,7 @@ function AgendarWeb() {
         <div className="card card-elevated">
           <div className="card-title">Selecciona la fecha</div>
           <p><strong>{medicoNombre}</strong></p>
-          <input type="date" value={fecha} min={new Date().toISOString().split("T")[0]} max={fechaMax} onChange={e => { setFecha(e.target.value); setHora(""); }} className="input-field" style={{ maxWidth:240 }} />
+          <input type="date" value={fecha} min={fechaHoy} max={fechaMax} onChange={e => { setFecha(e.target.value); setHora(""); }} className="input-field" style={{ maxWidth:240 }} />
           <small>Las citas se pueden agendar con hasta 4 semanas de anticipación</small>
         </div>
       )}
@@ -340,7 +341,7 @@ function AgendarWeb() {
             <div className="form-row">
               <div className="form-group">
                 <label className="input-label">Fecha de nacimiento</label>
-                <input type="date" className="input-field" value={paciente.fechaNacimiento} max={new Date().toISOString().split("T")[0]} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
+                <input type="date" className="input-field" value={paciente.fechaNacimiento} min="1900-01-01" max={fechaHoy} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label className="input-label">Correo electrónico</label>
