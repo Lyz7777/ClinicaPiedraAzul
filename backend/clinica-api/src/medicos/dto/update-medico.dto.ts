@@ -1,9 +1,15 @@
 import { IsString, IsOptional, MinLength, MaxLength, IsIn } from 'class-validator';
 
-const ESPECIALIDADES = [
-  'Medicina General','Pediatría','Cardiología','Dermatología','Psicología',
-  'Fisioterapia','Ginecología','Oftalmología','Otorrinolaringología',
-  'Traumatología','Neurología','Nutrición'
+const ESPECIALIDADES_FISIOTERAPIA = [
+  'Fisioterapia Deportiva',
+  'Fisioterapia Neurológica',
+  'Fisioterapia Ortopédica y Traumatológica',
+  'Fisioterapia Pediátrica',
+  'Fisioterapia Geriátrica',
+  'Fisioterapia Respiratoria',
+  'Fisioterapia Cardiovascular',
+  'Fisioterapia Uroginecológica y Obstétrica',
+  'Fisioterapia Oncológica'
 ];
 
 export class UpdateMedicoDto {
@@ -15,6 +21,6 @@ export class UpdateMedicoDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(ESPECIALIDADES, { message: 'Especialidad no válida' })
+  @IsIn(ESPECIALIDADES_FISIOTERAPIA, { message: 'Especialidad no válida' })
   especialidad?: string;
 }

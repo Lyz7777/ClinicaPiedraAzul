@@ -17,7 +17,7 @@ interface SidebarProps {
 function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
   const menuItemsAdmin = [
     { id: "citas", icon: CalendarDays, label: "Agenda de Citas" },
-    { id: "medicos", icon: Stethoscope, label: "Especialistas (CRUD)" },
+    { id: "medicos", icon: Stethoscope, label: "Especialistas" },
     { id: "pacientes", icon: Users, label: "Pacientes" },
     { id: "configuracion", icon: Settings, label: "Configuración Global" },
     { id: "validar", icon: QrCode, label: "Validar Códigos QR" },
@@ -25,8 +25,8 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
 
   const menuItemsAgendador = [
     { id: "citas", icon: CalendarDays, label: "Agenda de Citas" },
-    { id: "agendar-web", icon: Globe, label: "Reserva en Línea (Web)" },
-    { id: "medicos", icon: Stethoscope, label: "Especialistas (solo vista)" },
+    { id: "agendar-web", icon: Globe, label: "Reserva en Línea" },
+    { id: "medicos", icon: Stethoscope, label: "Especialistas" },
     { id: "pacientes", icon: Users, label: "Pacientes" },
     { id: "validar", icon: QrCode, label: "Validar Códigos QR" },
   ];
@@ -97,7 +97,7 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
       "Selecciona especialidad",
       "Elige médico y horario",
       "Confirma tu cita",
-      "Recibe código QR",
+      "Descarga tu código QR",
     ];
   };
 

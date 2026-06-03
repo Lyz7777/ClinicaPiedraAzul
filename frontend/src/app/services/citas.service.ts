@@ -36,6 +36,16 @@ export const getMisCitas = async (fecha?: string) => {
   return res.json();
 };
 
+// ==================== HORAS DISPONIBLES ====================
+
+export const getHorasDisponibles = async (medicoId: number, fecha: string) => {
+  const res = await fetch(`${URL}/horas-disponibles?medicoId=${medicoId}&fecha=${fecha}`, { 
+    headers: await getHeaders() 
+  });
+  if (!res.ok) return [];
+  return res.json();
+};
+
 // ==================== CREAR CITAS ====================
 
 export const crearCita = async (data: {
@@ -123,16 +133,6 @@ export const reagendarCita = async (id: number, fecha: string, hora: string) => 
   return res.json();
 };
 
-// ==================== HORAS DISPONIBLES ====================
-
-export const getHorasDisponibles = async (medicoId: number, fecha: string) => {
-  const res = await fetch(`${URL}/horas-disponibles?medicoId=${medicoId}&fecha=${fecha}`, { 
-    headers: await getHeaders() 
-  });
-  if (!res.ok) return [];
-  return res.json();
-};
-
 // ==================== EXPORTAR CSV ====================
 
 export const exportarCitasCSV = async (medicoId?: number, fecha?: string) => {
@@ -171,5 +171,17 @@ export const updateEstadoCita = async (id: number, estado: string) => {
     body: JSON.stringify({ estado })
   });
   if (!res.ok) throw new Error("Error al actualizar estado");
+  return res.json();
+};
+
+// ==================== MARCAR ASISTENCIA ====================
+
+export const marcarAsistencia = async (id: number, asistio: boolean, metodo?: string) => {
+  const res = await fetch(`${URL}/${id}/asistencia`, {
+    method: "PATCH",
+    headers: await getHeaders(true),
+    body: JSON.stringify({ asistio, metodo: metodo || 'MANUAL' })
+  });
+  if (!res.ok) throw new Error("Error al marcar asistencia");
   return res.json();
 };
