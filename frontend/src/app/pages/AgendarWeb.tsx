@@ -310,21 +310,42 @@ function AgendarWeb() {
           </div>
           <div className="card card-elevated">
             <div className="card-title">Tus datos personales</div>
-            <input className="input-field" placeholder="Documento de identidad *" value={paciente.documento} onChange={e => { const v = e.target.value; setPaciente(p => ({ ...p, documento: v })); if (v.length >= 4) buscarPaciente(v); }} />
-            {pacienteExistente && <div className="search-found">Paciente encontrado</div>}
-            <div style={{ display:"flex", gap:12 }}>
-              <input className="input-field" placeholder="Nombres *" value={paciente.nombres} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, nombres: e.target.value }))} />
-              <input className="input-field" placeholder="Apellidos *" value={paciente.apellidos} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, apellidos: e.target.value }))} />
+            <div className="form-group">
+              <label className="input-label">Documento de identidad <span className="input-required">*</span></label>
+              <input className="input-field" placeholder="Ej: CC, TI, Pasaporte" value={paciente.documento} onChange={e => { const v = e.target.value; setPaciente(p => ({ ...p, documento: v })); if (v.length >= 4) buscarPaciente(v); }} />
+              {pacienteExistente && <div className="search-found">Paciente encontrado</div>}
             </div>
-            <div style={{ display:"flex", gap:12 }}>
-              <input className="input-field" placeholder="Celular *" value={paciente.celular} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, celular: e.target.value.replace(/\D/g,"") }))} />
-              <select className="input-field" value={paciente.genero} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, genero: e.target.value as any }))}>
-                <option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="Otro">Otro</option>
-              </select>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="input-label">Nombres <span className="input-required">*</span></label>
+                <input className="input-field" placeholder="Nombres" value={paciente.nombres} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, nombres: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="input-label">Apellidos <span className="input-required">*</span></label>
+                <input className="input-field" placeholder="Apellidos" value={paciente.apellidos} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, apellidos: e.target.value }))} />
+              </div>
             </div>
-            <div style={{ display:"flex", gap:12 }}>
-              <input type="date" className="input-field" value={paciente.fechaNacimiento} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
-              <input type="email" className="input-field" placeholder="Correo electrónico" value={paciente.email} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))} />
+            <div className="form-row">
+              <div className="form-group">
+                <label className="input-label">Celular <span className="input-required">*</span></label>
+                <input className="input-field" placeholder="Celular" value={paciente.celular} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, celular: e.target.value.replace(/\D/g,"") }))} />
+              </div>
+              <div className="form-group">
+                <label className="input-label">Género <span className="input-required">*</span></label>
+                <select className="input-field" value={paciente.genero} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, genero: e.target.value as any }))}>
+                  <option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="Otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="input-label">Fecha de nacimiento</label>
+                <input type="date" className="input-field" value={paciente.fechaNacimiento} max={new Date().toISOString().split("T")[0]} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, fechaNacimiento: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="input-label">Correo electrónico</label>
+                <input type="email" className="input-field" placeholder="Correo electrónico" value={paciente.email} disabled={!!pacienteExistente} onChange={e => setPaciente(p => ({ ...p, email: e.target.value }))} />
+              </div>
             </div>
           </div>
         </div>
