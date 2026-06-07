@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { QrCode, Scan, CheckCircle, XCircle, Camera, Keyboard, AlertTriangle, Clock, RefreshCw, X, UserRound, Search } from "lucide-react";
+import { Camera, Keyboard, UserRound, AlertTriangle, Clock, Search } from "lucide-react";
 import { getAuthHeaders } from "../../auth/authService";
 import { Button, Input, Card, useToast } from "../UI";
 import { Html5Qrcode, Html5QrcodeScanType } from "html5-qrcode";
@@ -21,14 +21,11 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scannerDivId = "qr-scanner-reader";
-  const [intentos, setIntentos] = useState(0);
   const [codigo, setCodigo] = useState("");
   const [documentoBusqueda, setDocumentoBusqueda] = useState("");
-  const [resultado, setResultado] = useState<any>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoEscaneo, setEstadoEscaneo] = useState<"inactivo" | "buscando" | "exito" | "error" | "timeout">("inactivo");
-  const [qrDetectado, setQrDetectado] = useState<string | null>(null);
   const [marcandoAsistencia, setMarcandoAsistencia] = useState(false);
   const [citasEncontradas, setCitasEncontradas] = useState<any[]>([]);
 
@@ -39,7 +36,6 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
 
   useEffect(() => {
     Html5Qrcode.getCameras().then((devices) => { 
-      console.log("📷 Cámaras encontradas:", devices?.length || 0);
       setCamaras(devices || []); 
       if (devices && devices.length > 0) {
         const trasera = devices.find(d => 
@@ -49,33 +45,21 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
         );
         setCamaraSeleccionada(trasera?.id || devices[0].id);
       }
-    }).catch((err) => { 
-      console.error("Error obteniendo cámaras:", err);
-      setError("No se pudo acceder a las cámaras. Verifica los permisos.");
-    });
+    }).catch(() => {});
     return () => { limpiarTimers(); if (scannerRef.current) scannerRef.current.stop().catch(() => {}); };
   }, [limpiarTimers]);
 
   const detenerEscaner = useCallback(async () => {
     limpiarTimers();
     if (scannerRef.current) {
-      try { await scannerRef.current.stop(); console.log("📷 Escáner detenido"); } catch {}
+      try { await scannerRef.current.stop(); } catch {}
       scannerRef.current = null;
     }
     setEscaneando(false);
   }, [limpiarTimers]);
 
-  const reintentar = async () => {
-    setError(null);
-    setEstadoEscaneo("inactivo");
-    setQrDetectado(null);
-    await detenerEscaner();
-    setTimeout(() => iniciarEscaner(), 500);
-  };
-
   const validarCodigo = async (codigoValidar: string) => {
     const codigoLimpio = codigoValidar.trim().toUpperCase();
-    console.log("🔍 Validando código:", codigoLimpio);
     if (!codigoLimpio || codigoLimpio.length < 5) return;
     setCargando(true);
     setError(null);
@@ -88,10 +72,11 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Código no válido");
-      console.log("✅ Código válido:", data);
-      setResultado(data);
-      setCitasEncontradas([data.cita]);
-      toast.success("¡Código válido!", "Paciente verificado");
+      
+      if (data.cita) {
+        setCitasEncontradas([data.cita]);
+        toast.success("¡Código válido!");
+      }
       await detenerEscaner();
     } catch (err: any) {
       setError(err.message);
@@ -102,22 +87,27 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
   };
 
   const buscarPorDocumento = async () => {
-    if (!documentoBusqueda.trim()) { toast.error("Ingrese un número de documento"); return; }
+    if (!documentoBusqueda.trim()) { 
+      toast.error("Ingrese un número de documento"); 
+      return; 
+    }
     setCargando(true);
     setError(null);
-    setResultado(null);
     try {
       const authHeaders = await getAuthHeaders();
       const res = await fetch(`${URL}/por-documento/${documentoBusqueda.trim()}`, { headers: authHeaders });
+      
       if (!res.ok) { 
         if (res.status === 404) throw new Error("No se encontró un paciente con ese documento");
         throw new Error("Error al buscar citas");
       }
+      
       const data = await res.json();
       const citas = data.data || [];
       if (citas.length === 0) throw new Error("El paciente no tiene citas agendadas");
+      
       setCitasEncontradas(citas);
-      toast.success(`Se encontraron ${citas.length} cita(s) para ${data.paciente?.nombres || "el paciente"}`);
+      toast.success(`Se encontraron ${citas.length} cita(s)`);
     } catch (err: any) {
       setError(err.message);
       toast.error("Error", err.message);
@@ -147,36 +137,27 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
 
   const iniciarEscaner = async () => {
     if (!camaraSeleccionada) { toast.error("No hay cámaras disponibles"); return; }
-    setError(null); setResultado(null); setCitasEncontradas([]); setEstadoEscaneo("buscando"); 
-    setTiempoRestante(TIMEOUT_ESCANEO); setIntentos(prev => prev + 1);
+    setError(null); setCitasEncontradas([]); setEstadoEscaneo("buscando"); 
+    setTiempoRestante(TIMEOUT_ESCANEO);
     await detenerEscaner();
     await new Promise(resolve => setTimeout(resolve, 300));
+    
     timeoutRef.current = setTimeout(async () => { 
       setEstadoEscaneo("timeout"); 
       setError(`No se detectó QR después de ${TIMEOUT_ESCANEO}s`); 
       await detenerEscaner(); 
     }, TIMEOUT_ESCANEO * 1000);
+    
     intervalRef.current = setInterval(() => setTiempoRestante(prev => prev <= 1 ? 0 : prev - 1), 1000);
     setEscaneando(true);
+    
     try {
       const html5QrCode = new Html5Qrcode(scannerDivId);
       scannerRef.current = html5QrCode;
-      const config = {
-        fps: 30,
-        qrbox: { width: 300, height: 300 },
-        aspectRatio: 1.0,
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-      };
-      await html5QrCode.start(camaraSeleccionada, config, (decodedText) => { 
-        console.log("🎉 QR DETECTADO:", decodedText); 
-        if (decodedText?.trim()) validarCodigo(decodedText); 
-      }, (errorMessage) => { 
-        if (!errorMessage.includes("No MultiFormat") && !errorMessage.includes("NotFound")) {
-          console.warn("⚠️ Error escaneo:", errorMessage);
-        }
-      });
-      console.log("✅ Escáner iniciado");
+      await html5QrCode.start(camaraSeleccionada, { fps: 30, qrbox: { width: 300, height: 300 }, aspectRatio: 1.0 }, 
+        (decodedText) => { if (decodedText?.trim()) validarCodigo(decodedText); }, 
+        () => {}
+      );
     } catch (err: any) { 
       setEstadoEscaneo("error"); 
       setError(`Error: ${err.message}`); 
@@ -194,51 +175,61 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
     await detenerEscaner(); 
     setCodigo(""); 
     setDocumentoBusqueda("");
-    setResultado(null); 
     setCitasEncontradas([]);
     setError(null); 
     setEstadoEscaneo("inactivo"); 
-    setQrDetectado(null); 
   };
 
   const cambiarModo = async (nuevoModo: "escaner" | "manual" | "documento") => { 
     await detenerEscaner(); 
     setModo(nuevoModo); 
     setError(null); 
-    setResultado(null); 
     setCitasEncontradas([]);
     setCodigo(""); 
     setDocumentoBusqueda("");
     setEstadoEscaneo("inactivo"); 
-    setQrDetectado(null); 
   };
 
   const mostrarResultados = () => {
     if (citasEncontradas.length === 0) return null;
+    
     return (
       <div style={{ marginTop: 24 }}>
         <h3 style={{ marginBottom: 16 }}>📋 Citas encontradas</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {citasEncontradas.map((cita: any) => (
-            <div key={cita.id} style={{ background: "#F0FDF4", padding: 16, borderRadius: 16, border: "1px solid #BBF7D0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                <div>
-                  <p><strong>👤 Paciente:</strong> {cita.paciente?.nombres} {cita.paciente?.apellidos}</p>
-                  <p><strong>📅 Fecha:</strong> {cita.fecha} - {cita.hora}</p>
-                  <p><strong>👨‍⚕️ Especialista:</strong> {cita.medico?.nombre}</p>
-                </div>
-                <div>
-                  {cita.asistio ? (
-                    <span className="badge badge-success" style={{ background: "#10b981", color: "white", padding: "6px 12px" }}>✅ Ya atendido</span>
-                  ) : (
-                    <Button variant="success" onClick={() => marcarComoAtendido(cita)} loading={marcandoAsistencia} style={{ background: "#10b981" }}>
-                      ✅ Marcar como atendido
-                    </Button>
-                  )}
+          {citasEncontradas.map((cita: any) => {
+            // Extraer valores de forma segura
+            const pacienteNombre = typeof cita.paciente === 'string' ? cita.paciente : (cita.paciente?.nombres ? `${cita.paciente.nombres} ${cita.paciente.apellidos}` : 'No especificado');
+            const pacienteDocumento = typeof cita.pacienteDocumento === 'string' ? cita.pacienteDocumento : (cita.paciente?.documento || 'No disponible');
+            const medicoNombre = typeof cita.medico === 'string' ? cita.medico : (cita.medico?.nombre || 'No especificado');
+            const medicoEspecialidad = typeof cita.medicoEspecialidad === 'string' ? cita.medicoEspecialidad : (cita.medico?.especialidad || 'No especificada');
+            const pacienteCelular = typeof cita.pacienteCelular === 'string' ? cita.pacienteCelular : (cita.paciente?.celular || 'No disponible');
+            
+            return (
+              <div key={cita.id} style={{ background: "#F0FDF4", padding: 16, borderRadius: 16, border: "1px solid #BBF7D0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <p><strong>👤 Paciente:</strong> {pacienteNombre}</p>
+                    <p><strong>📄 Documento:</strong> {pacienteDocumento}</p>
+                    <p><strong>📅 Fecha:</strong> {cita.fecha || "No especificada"} - {cita.hora || "No especificada"}</p>
+                    <p><strong>👨‍⚕️ Especialista:</strong> {medicoNombre}</p>
+                    <p><strong>🏥 Especialidad:</strong> {medicoEspecialidad}</p>
+                    <p><strong>📞 Celular:</strong> {pacienteCelular}</p>
+                    <p><strong>📌 Estado:</strong> {cita.estado || "AGENDADA"}</p>
+                  </div>
+                  <div>
+                    {cita.asistio ? (
+                      <span className="badge badge-success" style={{ background: "#10b981", color: "white", padding: "6px 12px" }}>✅ Ya atendido</span>
+                    ) : (
+                      <Button variant="success" onClick={() => marcarComoAtendido(cita)} loading={marcandoAsistencia} style={{ background: "#10b981" }}>
+                        ✅ Marcar como atendido
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <Button variant="secondary" onClick={limpiar} style={{ marginTop: 16 }}>Nueva búsqueda</Button>
       </div>
@@ -258,7 +249,6 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
         <button className={`tab-btn ${modo === "documento" ? "active" : ""}`} onClick={() => cambiarModo("documento")} style={{ padding: "10px 24px", borderRadius: 30, border: "none", background: modo === "documento" ? "var(--primary-500)" : "var(--slate-100)", color: modo === "documento" ? "white" : "var(--text-secondary)", cursor: "pointer", fontWeight: 600 }}><UserRound size={18} /> Documento</button>
       </div>
       
-      {/* MODO ESCÁNER */}
       {modo === "escaner" && (
         <Card title="📷 Escanear código QR">
           {camaras.length > 1 && (<div className="form-group"><label>Seleccionar cámara</label><select className="input-field" value={camaraSeleccionada} onChange={(e) => { setCamaraSeleccionada(e.target.value); if (escaneando) detenerEscaner(); }} disabled={escaneando}>{camaras.map(cam => (<option key={cam.id} value={cam.id}>{cam.label || `Cámara ${cam.id.slice(0,8)}`}</option>))}</select></div>)}
@@ -266,14 +256,13 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
             {!escaneando && estadoEscaneo === "inactivo" && <div style={{ color: "var(--text-muted)", textAlign: "center" }}><Camera size={48} /><p>Presiona "Iniciar escáner"</p></div>}
           </div>
           {estadoEscaneo === "buscando" && (<div style={{ background: "#EFF6FF", padding: 16, borderRadius: 12, marginTop: 16, textAlign: "center" }}><div className="spinner-ring spinner-sm" style={{ display: "inline-block" }} /> Escaneando... {tiempoRestante}s</div>)}
-          {estadoEscaneo === "timeout" && (<div style={{ background: "#FFFBEB", padding: 16, borderRadius: 12, marginTop: 16 }}><AlertTriangle /> Tiempo agotado <Button variant="primary" size="sm" onClick={reintentar}>Reintentar</Button></div>)}
+          {estadoEscaneo === "timeout" && (<div style={{ background: "#FFFBEB", padding: 16, borderRadius: 12, marginTop: 16 }}><AlertTriangle /> Tiempo agotado <Button variant="primary" size="sm" onClick={iniciarEscaner}>Reintentar</Button></div>)}
           {estadoEscaneo === "error" && error && (<div style={{ background: "#FEF2F2", padding: 16, borderRadius: 12, marginTop: 16 }}>{error}<Button variant="secondary" size="sm" onClick={limpiar}>Reintentar</Button></div>)}
           <div style={{ marginTop: 16 }}>{!escaneando && estadoEscaneo !== "timeout" && <Button variant="primary" onClick={iniciarEscaner} disabled={!camaraSeleccionada}>Iniciar escáner</Button>}{escaneando && <Button variant="secondary" onClick={detenerEscaner}>Cancelar</Button>}</div>
           {mostrarResultados()}
         </Card>
       )}
       
-      {/* MODO MANUAL (Código) */}
       {modo === "manual" && (
         <Card title="⌨️ Ingresar código manualmente">
           <Input label="Código de verificación" placeholder="Ej: CITA-A3F8D2" value={codigo} onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setError(null); }} onKeyDown={(e) => e.key === "Enter" && validarCodigoManual()} />
@@ -283,7 +272,6 @@ function ValidadorQR({ rol = "agendador" }: ValidadorQRProps) {
         </Card>
       )}
       
-      {/* MODO DOCUMENTO */}
       {modo === "documento" && (
         <Card title="🔍 Buscar por número de documento">
           <Input label="Número de documento" placeholder="Ej: 1234567890" value={documentoBusqueda} onChange={(e) => { setDocumentoBusqueda(e.target.value); setError(null); }} onKeyDown={(e) => e.key === "Enter" && buscarPorDocumento()} />

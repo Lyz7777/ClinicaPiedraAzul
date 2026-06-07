@@ -28,46 +28,53 @@ export const crearPaciente = async (data: {
     headers: await getHeaders(true),
     body: JSON.stringify(data)
   });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Error al crear paciente");
+  }
   return res.json();
 };
 
 export const buscarPacientePorDocumento = async (documento: string) => {
   try {
-    const res = await fetch(`${URL}/documento/${documento}`, { headers: await getHeaders() });
-    if (!res.ok) {
-      if (res.status === 404) return null;
-      throw new Error('Error al buscar paciente');
-    }
-    if (res.status === 204) return null;
-    const contentType = res.headers.get('content-type') ?? '';
-    if (!contentType.includes('application/json')) {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${URL}/documento/${documento}`, {
+      headers: authHeaders
+    });
+
+    if (res.status === 404) {
       return null;
     }
-    return res.json();
+
+    if (!res.ok) {
+      console.error("Error en búsqueda:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    if (data && data.id && data.nombres && !data.nombres.startsWith('auth0_')) {
+      return data;
+    }
+    return null;
   } catch (error) {
     console.error('Error buscando paciente:', error);
     return null;
   }
 };
 
-export const actualizarPaciente = async (id: number, data: {
-  nombres?: string;
-  apellidos?: string;
-  documento?: string;
-  celular?: string;
-  genero?: 'Hombre' | 'Mujer' | 'Otro';
-  fechaNacimiento?: string;
-  email?: string;
-  auth0Id?: string;
-}) => {
+export const actualizarPaciente = async (id: number, data: any) => {
   const res = await fetch(`${URL}/${id}`, {
     method: "PUT",
     headers: await getHeaders(true),
     body: JSON.stringify(data)
   });
+  if (!res.ok) throw new Error("Error al actualizar");
   return res.json();
 };
 
 export const eliminarPaciente = async (id: number) => {
-  await fetch(`${URL}/${id}`, { method: "DELETE", headers: await getHeaders() });
+  await fetch(`${URL}/${id}`, {
+    method: "DELETE",
+    headers: await getHeaders()
+  });
 };

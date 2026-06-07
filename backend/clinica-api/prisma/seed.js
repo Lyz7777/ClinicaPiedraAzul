@@ -5,138 +5,106 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Iniciando seed de datos...');
 
-  // ==================== USUARIOS BASE ====================
+  // Usuarios base
   const usuarios = [
-    {
-      auth0Id: 'auth0|admin_default',
-      username: 'administrador',
-      email: 'admin@gmail.com.com',
-      nombre: 'Administrador del Sistema',
-      role: 'admin'
-    },
-    {
-      auth0Id: 'auth0|agendador_default',
-      username: 'agendador',
-      email: 'agendador@gmail.com',
-      nombre: 'Agendador de Citas',
-      role: 'agendador'
-    },
-    {
-      auth0Id: 'auth0|paciente_default',
-      username: 'paciente',
-      email: 'paciente@gmail.com',
-      nombre: 'Paciente de Prueba',
-      role: 'paciente'
-    },
-    {
-      auth0Id: 'auth0|medico_default',
-      username: 'medico',
-      email: 'medico@gmail.com',
-      nombre: 'Médico de Prueba',
-      role: 'medico'
-    },
+    { auth0Id: 'auth0|admin_default', username: 'administrador', email: 'admin@gmail.com', nombre: 'Administrador', role: 'admin' },
+    { auth0Id: 'auth0|agendador_default', username: 'agendador', email: 'agendador@gmail.com', nombre: 'Agendador', role: 'agendador' },
+    { auth0Id: 'auth0|paciente_default', username: 'paciente', email: 'paciente@gmail.com', nombre: 'Paciente Prueba', role: 'paciente' },
+    { auth0Id: 'auth0|medico_default', username: 'medico', email: 'medico@gmail.com', nombre: 'Médico General', role: 'medico' },
   ];
 
   for (const usuario of usuarios) {
-    await prisma.usuario.upsert({
-      where: { username: usuario.username },
-      update: usuario,
-      create: usuario,
-    });
-    console.log(`✅ Usuario ${usuario.username} (${usuario.role})`);
+    await prisma.usuario.upsert({ where: { username: usuario.username }, update: usuario, create: usuario });
+    console.log(`✅ Usuario ${usuario.username}`);
   }
 
-  // ==================== PACIENTE DE EJEMPLO ====================
-  const pacienteData = {
-    documento: '1002964972',
-    nombres: 'Laura',
-    apellidos: 'Mera',
-    celular: '3004336562',
-    genero: 'Mujer',
-    fechaNacimiento: '1995-06-15',
-    email: 'laura.mera@email.com',
-    auth0Id: 'auth0|paciente_default'
-  };
-
+  // Paciente
   await prisma.paciente.upsert({
     where: { documento: '1002964972' },
-    update: pacienteData,
-    create: pacienteData,
+    update: {},
+    create: {
+      documento: '1002964972',
+      nombres: 'Laura',
+      apellidos: 'Mera',
+      celular: '3004336562',
+      genero: 'Mujer',
+      email: 'laura@email.com',
+      auth0Id: 'auth0|paciente_default'
+    }
   });
-  console.log(`✅ Paciente: ${pacienteData.nombres} ${pacienteData.apellidos}`);
+  console.log('✅ Paciente Laura Mera');
 
-  // ==================== MÉDICOS DE EJEMPLO ====================
-  const medicosData = [
-    { nombre: 'Dra. Carolina Méndez', especialidad: 'Medicina General', auth0Id: 'auth0|medico_general' },
-    { nombre: 'Dr. Ricardo Herrera', especialidad: 'Cardiología', auth0Id: 'auth0|medico_cardio' },
-    { nombre: 'Dra. Sofía Villalba', especialidad: 'Dermatología', auth0Id: 'auth0|medico_derma' },
-    { nombre: 'Lic. Mariana Torres', especialidad: 'Psicología', auth0Id: 'auth0|medico_psico' },
-    { nombre: 'Dr. Andrés Ríos', especialidad: 'Traumatología', auth0Id: 'auth0|medico_trauma' },
+  // Médicos
+  const medicos = [
+    { nombre: 'Dra. Carolina Méndez', especialidad: 'Médico/Terapista', auth0Id: 'auth0|medico_carolina', email: 'carolina@clinica.com' },
+    { nombre: 'Dr. Ricardo Herrera', especialidad: 'Fisioterapeuta', auth0Id: 'auth0|medico_ricardo', email: 'ricardo@clinica.com' },
+    { nombre: 'Dra. Sofía Villalba', especialidad: 'Médico/Terapista', auth0Id: 'auth0|medico_sofia', email: 'sofia@clinica.com' },
+    { nombre: 'Lic. Mariana Torres', especialidad: 'Fisioterapeuta', auth0Id: 'auth0|medico_mariana', email: 'mariana@clinica.com' },
+    { nombre: 'Dr. Andrés Ríos', especialidad: 'Quiropráctico', auth0Id: 'auth0|medico_andres', email: 'andres@clinica.com' },
+    { nombre: 'Médico General', especialidad: 'Médico/Terapista', auth0Id: 'auth0|medico_default', email: 'medico@gmail.com' },
   ];
 
-  for (const m of medicosData) {
-    const existente = await prisma.medico.findUnique({
-      where: { auth0Id: m.auth0Id }
-    });
-    
-    if (!existente) {
-      await prisma.medico.create({ data: m });
-      console.log(`✅ Médico creado: ${m.nombre}`);
-    } else {
-      console.log(`⏭️ Médico ya existe: ${m.nombre}`);
-    }
+  for (const m of medicos) {
+    await prisma.medico.upsert({ where: { auth0Id: m.auth0Id }, update: m, create: m });
+    console.log(`✅ Médico: ${m.nombre}`);
   }
 
-  // ==================== CONFIGURACIONES DE HORARIO ====================
-  const medicos = await prisma.medico.findMany();
-  
+  // Configuraciones de horario
+  const medicosLista = await prisma.medico.findMany();
   const configs = [
-    { medicoAuth0Id: 'auth0|medico_general', dias: 'LUNES,MARTES,MIERCOLES,JUEVES,VIERNES', inicio: '08:00', fin: '17:00', intervalo: 30 },
-    { medicoAuth0Id: 'auth0|medico_cardio', dias: 'LUNES,MIERCOLES,VIERNES', inicio: '09:00', fin: '15:00', intervalo: 30 },
-    { medicoAuth0Id: 'auth0|medico_derma', dias: 'MARTES,JUEVES', inicio: '10:00', fin: '18:00', intervalo: 30 },
-    { medicoAuth0Id: 'auth0|medico_psico', dias: 'LUNES,MIERCOLES,VIERNES', inicio: '08:00', fin: '20:00', intervalo: 30 },
-    { medicoAuth0Id: 'auth0|medico_trauma', dias: 'LUNES,MARTES,MIERCOLES,JUEVES', inicio: '07:00', fin: '13:00', intervalo: 30 },
+    { nombre: 'Dra. Carolina Méndez', dias: 'LUNES,MARTES,MIERCOLES,JUEVES,VIERNES', inicio: '08:00', fin: '17:00', intervalo: 30 },
+    { nombre: 'Dr. Ricardo Herrera', dias: 'LUNES,MIERCOLES,VIERNES', inicio: '09:00', fin: '15:00', intervalo: 30 },
+    { nombre: 'Dra. Sofía Villalba', dias: 'MARTES,JUEVES', inicio: '10:00', fin: '18:00', intervalo: 30 },
+    { nombre: 'Lic. Mariana Torres', dias: 'LUNES,MIERCOLES,VIERNES', inicio: '08:00', fin: '20:00', intervalo: 30 },
+    { nombre: 'Dr. Andrés Ríos', dias: 'LUNES,MARTES,MIERCOLES,JUEVES', inicio: '07:00', fin: '13:00', intervalo: 30 },
+    { nombre: 'Médico General', dias: 'LUNES,MIERCOLES,VIERNES', inicio: '08:00', fin: '17:00', intervalo: 30 },
   ];
 
   for (const config of configs) {
-    const medico = medicos.find(m => m.auth0Id === config.medicoAuth0Id);
+    const medico = medicosLista.find(m => m.nombre === config.nombre);
     if (medico) {
-      const existente = await prisma.configuracionMedico.findUnique({
-        where: { medicoId: medico.id }
+      await prisma.configuracionMedico.upsert({
+        where: { medicoId: medico.id },
+        update: { diasAtencion: config.dias, horaInicio: config.inicio, horaFin: config.fin, intervaloMinutos: config.intervalo },
+        create: { medicoId: medico.id, diasAtencion: config.dias, horaInicio: config.inicio, horaFin: config.fin, intervaloMinutos: config.intervalo }
       });
-      
-      if (!existente) {
-        await prisma.configuracionMedico.create({
-          data: {
-            medicoId: medico.id,
-            diasAtencion: config.dias,
-            horaInicio: config.inicio,
-            horaFin: config.fin,
-            intervaloMinutos: config.intervalo,
-          },
-        });
-        console.log(`✅ Horario configurado para: ${medico.nombre}`);
-      }
+      console.log(`✅ Horario para: ${medico.nombre}`);
     }
   }
 
-  // ==================== CONFIGURACIÓN GLOBAL ====================
-  const configGlobal = await prisma.configuracionGlobal.findFirst();
-  if (!configGlobal) {
-    await prisma.configuracionGlobal.create({
-      data: { ventanaSemanas: 4 }
+  // Citas de ejemplo
+  const paciente = await prisma.paciente.findFirst();
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + 3);
+  const fechaStr = fecha.toISOString().split('T')[0];
+
+  for (const medico of medicosLista.slice(0, 3)) {
+    await prisma.cita.upsert({
+      where: { id: -1 },
+      update: {},
+      create: {
+        fecha: fechaStr,
+        hora: '10:00',
+        pacienteId: paciente.id,
+        medicoId: medico.id,
+        estado: 'AGENDADA',
+        codigoVerificacion: `CITA-${medico.id}-${Date.now()}`,
+        descripcion: `Cita de ejemplo con ${medico.nombre}`
+      }
     });
-    console.log(` Configuración global creada`);
+    console.log(`✅ Cita con: ${medico.nombre}`);
   }
 
-  console.log(' Seed completado exitosamente');
+  // Configuración global
+  await prisma.configuracionGlobal.upsert({
+    where: { id: 1 },
+    update: { ventanaSemanas: 4 },
+    create: { ventanaSemanas: 4 }
+  });
+
+  console.log('✅ Seed completado');
 }
 
 main()
-  .catch((e) => {
-    console.error(' Error en seed:', e.message);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch(console.error)
+  .finally(async () => await prisma.$disconnect());

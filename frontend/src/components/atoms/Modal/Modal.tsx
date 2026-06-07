@@ -19,9 +19,15 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
+  const sizeStyles = {
+    sm: { maxWidth: '400px' },
+    md: { maxWidth: '540px' },
+    lg: { maxWidth: '800px' },
+  };
+
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`modal-container modal-${size}`}>
+      <div className="modal-container" style={sizeStyles[size]}>
         {(title || showCloseButton) && (
           <div className="modal-header">
             {title && <h3 className="modal-title">{title}</h3>}

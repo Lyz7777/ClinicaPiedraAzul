@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -44,6 +44,8 @@ model medico {
   nombre          String
   especialidad    String
   auth0Id         String?  @unique
+  email           String?  @unique
+  telefono        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
@@ -81,15 +83,15 @@ model cita {
   codigoVerificacion String?  @unique
   recordatorioEnviado   Boolean  @default(false)
   recordatorioEnviadoEn DateTime?
+  notasMedicas       String?   // Historia clínica (texto plano)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-  
-  // CAMPOS DE ASISTENCIA
+
   asistio           Boolean   @default(false)
   asistioEn         DateTime?
   asistioPor        String?
   asistioMetodo     String?
-  
+
   historial historialCita[]
 }
 

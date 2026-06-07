@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import {
   CalendarDays,
   Clock3,
@@ -18,6 +19,7 @@ import {
   UserCog,
 } from "lucide-react";
 import Login from "./pages/Login";
+import AgendarWeb from "./pages/AgendarWeb";
 import Sidebar from "../components/organisms/Sidebar";
 import Header from "../components/organisms/Header";
 import Footer from "../components/organisms/Footer";
@@ -26,13 +28,73 @@ import Citas from "./pages/citas";
 import MisCitas from "./pages/MisCitas";
 import Medicos from "./pages/medicos";
 import Pacientes from "./pages/pacientes";
-import AgendarWeb from "./pages/AgendarWeb";
 import ValidadorQR from "../components/molecules/ValidadorQR";
 import AuthCallback from "../auth/AuthCallback";
 import { useAuth } from "../auth/useAuth";
 import type { UserRole } from "../auth/authService";
 
-function App() {
+// Componente para pacientes anónimos (sin Auth0)
+function PacienteAnonimoDashboard() {
+  const [vista, setVista] = useState("agendar-web");
+
+  const metricasVista: Record<string, { titulo: string; valor: string; nota: string; icono: any }[]> = {
+    "agendar-web": [
+      { titulo: "Reserva en línea", valor: "24/7", nota: "Disponible siempre", icono: Globe },
+      { titulo: "Especialistas", valor: "12", nota: "En nuestra clínica", icono: Stethoscope },
+      { titulo: "Cobertura", valor: "7", nota: "Especialidades", icono: ShieldCheck },
+    ],
+    "mis-citas": [
+      { titulo: "Próximas citas", valor: "0", nota: "Agenda la primera", icono: CalendarDays },
+      { titulo: "Historial", valor: "0", nota: "Citas anteriores", icono: Clock3 },
+      { titulo: "Recordatorios", valor: "Activos", nota: "Vía SMS/Email", icono: Activity },
+    ],
+  };
+
+  const renderVista = () => {
+    switch (vista) {
+      case "agendar-web":
+        return <AgendarWeb />;
+      case "mis-citas":
+        return <MisCitas rol="paciente" esAnonimo={true} />;
+      default:
+        return <AgendarWeb />;
+    }
+  };
+
+  return (
+    <DashboardLayout
+      header={<Header esAnonimo={true} />}
+      sidebar={<Sidebar setVista={setVista} activeVista={vista} rol="paciente" esAnonimo={true} />}
+      footer={<Footer />}
+    >
+      <section className="role-banner">
+        <div className="role-banner-icon">
+          <UserCog size={18} />
+        </div>
+        <div>
+          <p className="role-banner-title">Portal del Paciente</p>
+          <span className="role-banner-subtitle">Agenda y consulta tus citas de forma rápida</span>
+        </div>
+      </section>
+      <section className="metrics-grid">
+        {(metricasVista[vista] ?? metricasVista["agendar-web"]).map((m) => (
+          <article className="metric-card" key={`${vista}-${m.titulo}`}>
+            <div className="metric-icon"><m.icono size={20} /></div>
+            <div>
+              <p className="metric-title">{m.titulo}</p>
+              <h3 className="metric-value">{m.valor}</h3>
+              <span className="metric-note">{m.nota}</span>
+            </div>
+          </article>
+        ))}
+      </section>
+      {renderVista()}
+    </DashboardLayout>
+  );
+}
+
+// Componente para usuarios autenticados con Auth0
+function AuthenticatedApp() {
   const { isAuthenticated, isLoading, getUserRole, getUserRoles, getRawRoles, logout, user } = useAuth();
   const [vista, setVista] = useState("citas");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
@@ -105,7 +167,7 @@ function App() {
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    return <Navigate to="/login" replace />;
   }
 
   if (availableRoles.length === 0 && !isLoading) {
@@ -135,7 +197,7 @@ function App() {
         </section>
       </div>
     );
-}
+  }
 
   if (availableRoles.length > 0 && !selectedRole) {
     return (
@@ -234,7 +296,7 @@ function App() {
       case "configuracion":
         return <Medicos rol={rolActivo} modo="configuracion" />;
       case "mis-citas":
-        return <MisCitas />;
+        return <MisCitas rol={rolActivo} />;
       case "validar":
         return <ValidadorQR rol={rolActivo} />;
       default:
@@ -287,6 +349,31 @@ function App() {
       </section>
       {renderVista()}
     </DashboardLayout>
+  );
+}
+
+// Componente principal
+function App() {
+  // Verificar si es un paciente anónimo
+  const isPacienteAnonimo = localStorage.getItem('paciente_anonimo') === 'true';
+
+  if (isPacienteAnonimo) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/*" element={<PacienteAnonimoDashboard />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={<AuthenticatedApp />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

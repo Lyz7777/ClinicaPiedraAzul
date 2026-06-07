@@ -1,37 +1,55 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
   
   // Seguridad
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  }));
   
-  app.useGlobalPipes(new ValidationPipe());
+  // Validación global
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
   
-  const envOrigins = (process.env.CORS_ORIGIN ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  const defaultOrigins = [
+  // CORS configurado
+  const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://clinica-frontend-zeuh.onrender.com',
-  ];
-
-  const allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultOrigins;
+    'http://localhost:5174',
+    process.env.FRONTEND_URL,
+  ].filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Authorization', 'Content-Type'],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'), false);
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Accept'],
     credentials: true,
   });
   
-  await app.listen(3000);
-  console.log('🚀 Backend corriendo en http://localhost:3000');
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`🚀 Backend corriendo en http://localhost:${port}`);
 }
+
 bootstrap();

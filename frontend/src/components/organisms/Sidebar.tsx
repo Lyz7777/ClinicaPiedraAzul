@@ -12,9 +12,59 @@ interface SidebarProps {
   setVista: (vista: string) => void;
   activeVista: string;
   rol: "admin" | "agendador" | "paciente" | "medico";
+  esAnonimo?: boolean;
 }
 
-function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
+function Sidebar({ setVista, activeVista, rol, esAnonimo = false }: SidebarProps) {
+  // Menú para pacientes anónimos (sin autenticación)
+  if (esAnonimo || rol === "paciente") {
+    const menuItemsPaciente = [
+      { id: "agendar-web", icon: Globe, label: "Agendar Cita" },
+      { id: "mis-citas", icon: CalendarDays, label: "Mis Citas" },
+    ];
+
+    return (
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            <Hospital size={22} />
+          </div>
+          <div className="brand-text">
+            <h2>Portal Paciente</h2>
+            <p>Autogestión de citas médicas</p>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {menuItemsPaciente.map((item) => (
+            <div
+              key={item.id}
+              className={`nav-item ${activeVista === item.id ? "active" : ""}`}
+              onClick={() => setVista(item.id)}
+            >
+              <span className="nav-icon">
+                <item.icon size={18} />
+              </span>
+              <span className="nav-label">{item.label}</span>
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-info">
+            <p>Funcionalidades disponibles</p>
+            <ul>
+              <li><span className="list-dot" />Selecciona especialidad</li>
+              <li><span className="list-dot" />Elige médico y horario</li>
+              <li><span className="list-dot" />Confirma tu cita</li>
+              <li><span className="list-dot" />Descarga tu código QR</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   const menuItemsAdmin = [
     { id: "citas", icon: CalendarDays, label: "Agenda de Citas" },
     { id: "medicos", icon: Stethoscope, label: "Especialistas" },
@@ -31,14 +81,9 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
     { id: "validar", icon: QrCode, label: "Validar Códigos QR" },
   ];
 
-  const menuItemsPaciente = [
-    { id: "agendar-web", icon: Globe, label: "Agendar Cita" },
-    { id: "mis-citas", icon: CalendarDays, label: "Mis Citas" },
-  ];
-
   const menuItemsMedico = [
-    { id: "mis-citas", icon: CalendarDays, label: "Mis Citas" },
-    { id: "validar", icon: QrCode, label: "Validar Entrada" },
+    { id: "citas", icon: CalendarDays, label: "Agenda de Citas" },
+    { id: "validar", icon: QrCode, label: "Validar Códigos QR" },
   ];
 
   const menuItems =
@@ -48,11 +93,7 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
       ? menuItemsAgendador
       : rol === "medico"
       ? menuItemsMedico
-      : menuItemsPaciente;
-
-  const handleClick = (id: string) => {
-    setVista(id);
-  };
+      : menuItemsAgendador; // fallback
 
   const getRoleTitle = () => {
     if (rol === "admin") return "Dashboard Administrador";
@@ -64,7 +105,7 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
   const getRoleDescription = () => {
     if (rol === "admin") return "Configuración y control del sistema";
     if (rol === "agendador") return "Gestión de citas y pacientes";
-    if (rol === "medico") return "Seguimiento de tus citas";
+    if (rol === "medico") return "Gestión completa de citas clínicas";
     return "Autogestión de citas médicas";
   };
 
@@ -82,15 +123,16 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
         "Crea y gestiona citas",
         "Registra nuevos pacientes",
         "Consulta disponibilidad",
-        "Solo lectura de especialistas",
+        "Exporta reportes CSV",
       ];
     }
     if (rol === "medico") {
       return [
-        "Consulta tu agenda",
-        "Reagenda citas",
-        "Registra asistencia",
-        "Ver historial de cambios",
+        "Consulta todas las citas",
+        "Filtra por especialista y fecha",
+        "Exporta reportes CSV",
+        "Registra historia clínica",
+        "Marca asistencia de pacientes",
       ];
     }
     return [
@@ -118,7 +160,7 @@ function Sidebar({ setVista, activeVista, rol }: SidebarProps) {
           <div
             key={item.id}
             className={`nav-item ${activeVista === item.id ? "active" : ""}`}
-            onClick={() => handleClick(item.id)}
+            onClick={() => setVista(item.id)}
           >
             <span className="nav-icon">
               <item.icon size={18} />

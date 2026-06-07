@@ -1,10 +1,18 @@
 import { HeartPulse } from "lucide-react";
 import { useAuth } from "../../auth/useAuth";
 import { isAuth0Configured } from "../../auth/auth0-config";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
   const { loginWithRedirect } = useAuth();
+  const navigate = useNavigate();
   const domainValue = import.meta.env.VITE_AUTH0_DOMAIN;
+
+  const irAPanelPaciente = () => {
+    // Guardar en localStorage que es un paciente sin autenticación
+    localStorage.setItem('paciente_anonimo', 'true');
+    navigate("/dashboard-paciente");
+  };
 
   return (
     <div className="login-shell">
@@ -17,8 +25,19 @@ function Login() {
           </div>
           <div className="login-form">
             <p style={{ textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 4 }}>
-              Serás redirigido al portal seguro de autenticación
+              Elige cómo quieres continuar
             </p>
+
+            {/* Botón para acceder como paciente (sin login) */}
+            <button
+              className="login-submit-btn"
+              onClick={irAPanelPaciente}
+              style={{ background: "#10b981", marginBottom: "12px" }}
+            >
+              📅 Acceder como Paciente
+            </button>
+
+            {/* Botón de Auth0 para personal médico/administrativo */}
             <button
               className="login-submit-btn"
               onClick={() =>
@@ -31,12 +50,17 @@ function Login() {
             >
               Iniciar sesión con Auth0
             </button>
+
             {!isAuth0Configured && (
               <div className="login-warning">
                 ⚠️ Configura las variables de entorno de Auth0 en <code>.env</code> para continuar.
                 {domainValue ? ` Dominio actual: ${domainValue}` : " Dominio: no definido"}
               </div>
             )}
+
+            <p style={{ fontSize: "0.7rem", marginTop: "16px", color: "var(--text-muted)" }}>
+              Los pacientes acceden sin registro. Solo necesitas tu documento.
+            </p>
           </div>
         </div>
       </section>
