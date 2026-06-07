@@ -12,16 +12,6 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-<<<<<<< HEAD
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "strictBindCallApply": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-=======
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
@@ -29,7 +19,6 @@
     "noFallthroughCasesInSwitch": false,
     "types": ["node", "jest"],
     "ignoreDeprecations": "6.0"
->>>>>>> 1781158f (feat: agendamiento público para pacientes y visualización de notas médicas)
   },
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
