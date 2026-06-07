@@ -1,15 +1,9 @@
 import { IsString, MinLength, MaxLength, IsIn } from 'class-validator';
 
-const ESPECIALIDADES_FISIOTERAPIA = [
-  'Fisioterapia Deportiva',
-  'Fisioterapia Neurológica',
-  'Fisioterapia Ortopédica y Traumatológica',
-  'Fisioterapia Pediátrica',
-  'Fisioterapia Geriátrica',
-  'Fisioterapia Respiratoria',
-  'Fisioterapia Cardiovascular',
-  'Fisioterapia Uroginecológica y Obstétrica',
-  'Fisioterapia Oncológica'
+const ESPECIALIDADES = [
+  'Médico/Terapista',
+  'Fisioterapeuta',
+  'Quiropráctico'
 ];
 
 export class CreateMedicoDto {
@@ -19,6 +13,6 @@ export class CreateMedicoDto {
   nombre!: string;
 
   @IsString()
-  @IsIn(ESPECIALIDADES_FISIOTERAPIA, { message: 'Especialidad no válida' })
+  @IsIn(ESPECIALIDADES, { message: 'Especialidad no válida' })
   especialidad!: string;
 }

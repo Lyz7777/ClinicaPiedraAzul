@@ -1,50 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Cita` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `ConfiguracionGlobal` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `ConfiguracionMedico` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `HistorialCita` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Medico` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Paciente` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Usuario` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "Cita";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "ConfiguracionGlobal";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "ConfiguracionMedico";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "HistorialCita";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "Medico";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "Paciente";
-PRAGMA foreign_keys=on;
-
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "Usuario";
-PRAGMA foreign_keys=on;
-
 -- CreateTable
 CREATE TABLE "usuario" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +33,8 @@ CREATE TABLE "medico" (
     "nombre" TEXT NOT NULL,
     "especialidad" TEXT NOT NULL,
     "auth0Id" TEXT,
+    "email" TEXT,
+    "telefono" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "usuarioId" INTEGER,
@@ -115,8 +70,13 @@ CREATE TABLE "cita" (
     "codigoVerificacion" TEXT,
     "recordatorioEnviado" BOOLEAN NOT NULL DEFAULT false,
     "recordatorioEnviadoEn" DATETIME,
+    "notasMedicas" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
+    "asistio" BOOLEAN NOT NULL DEFAULT false,
+    "asistioEn" DATETIME,
+    "asistioPor" TEXT,
+    "asistioMetodo" TEXT,
     CONSTRAINT "cita_pacienteId_fkey" FOREIGN KEY ("pacienteId") REFERENCES "paciente" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "cita_medicoId_fkey" FOREIGN KEY ("medicoId") REFERENCES "medico" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -153,6 +113,9 @@ CREATE UNIQUE INDEX "paciente_usuarioId_key" ON "paciente"("usuarioId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "medico_auth0Id_key" ON "medico"("auth0Id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "medico_email_key" ON "medico"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "medico_usuarioId_key" ON "medico"("usuarioId");
