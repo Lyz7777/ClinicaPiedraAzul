@@ -285,8 +285,12 @@ function AuthenticatedApp() {
 
   const renderVista = () => {
     switch (vista) {
+        //case "citas":
+        //return <Citas rol={rolActivo} />;
       case "citas":
-        return <Citas rol={rolActivo} />;
+        return rolActivo === "medico"
+        ? <MisCitas rol={rolActivo} />
+        : <Citas rol={rolActivo} />;
       case "medicos":
         return <Medicos rol={rolActivo} />;
       case "pacientes":
